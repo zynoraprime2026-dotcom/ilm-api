@@ -1,19 +1,41 @@
 {
-  "name": "workspace",
-  "version": "0.0.0",
-  "license": "MIT",
+  "name": "ilm-api",
+  "version": "1.0.0",
+  "description": "A unified Islamic knowledge API — Quran, Hadith, Prayer Times, and Du'as",
+  "main": "src/server.js",
+  "type": "commonjs",
   "scripts": {
-    "preinstall": "sh -c 'rm -f package-lock.json yarn.lock; case \"$npm_config_user_agent\" in pnpm/*) ;; *) echo \"Use pnpm instead\" >&2; exit 1 ;; esac'",
-    "build": "pnpm run typecheck && pnpm -r --if-present run build",
-    "typecheck:libs": "tsc --build",
-    "typecheck": "pnpm run typecheck:libs && pnpm -r --filter \"./artifacts/**\" --filter \"./scripts\" --if-present run typecheck"
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "seed:quran": "node scripts/seedQuran.js",
+    "seed:tafsir": "node scripts/seedTafsir.js",
+    "seed:hadith": "node scripts/seedHadith.js",
+    "seed:narrators": "node scripts/seedNarrators.js",
+    "seed:roots": "node scripts/seedRootWords.js",
+    "seed:topics": "node scripts/seedTopics.js",
+    "seed:fiqh": "node scripts/seedFiqh.js",
+    "seed:reciters": "node scripts/seedReciters.js",
+    "seed:duas": "node scripts/seedDuas.js",
+    "migrate": "node scripts/migrate.js"
   },
-  "private": true,
   "dependencies": {
-    "@replit/connectors-sdk": "^0.4.1"
+    "express": "^4.19.2",
+    "pg": "^8.12.0",
+    "dotenv": "^16.4.5",
+    "cors": "^2.8.5",
+    "compression": "^1.7.4",
+    "helmet": "^7.1.0",
+    "express-rate-limit": "^7.4.0",
+    "ioredis": "^5.4.1",
+    "adhan": "^4.4.3",
+    "node-fetch": "^2.7.0",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2"
   },
   "devDependencies": {
-    "prettier": "^3.9.5",
-    "typescript": "~5.9.3"
+    "nodemon": "^3.1.4"
+  },
+  "engines": {
+    "node": ">=18"
   }
 }

@@ -47,3 +47,11 @@ Thumbs.db
 # Replit
 .cache/
 .local/
+
+# Environment variables — never commit secrets
+.env
+.env.local
+.env.*.local
+
+# Uploaded assets (not part of source)
+attached_assets/

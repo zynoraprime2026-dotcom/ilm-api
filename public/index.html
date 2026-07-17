@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ilm API — Documentation</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #0E2A2B; color: #F3ECDA;
+    font-family: 'Work Sans', sans-serif; line-height: 1.6;
+  }
+  a { color: #C9A24B; }
+  .wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; position: relative; }
+  .star { position: absolute; top: -100px; right: -100px; opacity: 0.06; animation: spin 60s linear infinite; transform-origin: center; }
+  @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  .eyebrow { color: #C9A24B; font-size: 12px; letter-spacing: 2px; font-weight: 600; }
+  h1 { font-family: 'Amiri', serif; font-style: italic; font-size: 40px; margin: 10px 0 14px; }
+  .lede { color: #A8967A; font-size: 15.5px; max-width: 640px; }
+  .signup {
+    margin-top: 28px; background: rgba(243,236,218,0.04); border: 1px solid rgba(201,162,75,0.2);
+    border-radius: 10px; padding: 22px; max-width: 480px;
+  }
+  .signup label { display: block; font-size: 12px; color: #A8967A; margin-bottom: 6px; }
+  .signup input {
+    width: 100%; background: #0E2A2B; color: #F3ECDA; border: 1px solid rgba(201,162,75,0.3);
+    border-radius: 6px; padding: 9px 12px; font-size: 14px; margin-bottom: 12px;
+  }
+  .signup button {
+    background: #1F6F5C; color: #F3ECDA; border: none; border-radius: 6px;
+    padding: 10px 20px; font-size: 14px; font-weight: 500; cursor: pointer;
+  }
+  .signup button:hover { filter: brightness(1.08); }
+  #signup-result { margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #5FBFA0; word-break: break-all; }
+  h2 { font-family: 'Amiri', serif; font-style: italic; font-size: 24px; color: #F3ECDA; margin: 56px 0 18px; border-bottom: 1px solid rgba(201,162,75,0.15); padding-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th { text-align: left; color: #C9A24B; font-weight: 600; padding: 8px 10px; font-size: 12px; letter-spacing: 0.5px; }
+  td { padding: 8px 10px; border-top: 1px solid rgba(201,162,75,0.1); vertical-align: top; }
+  code { font-family: 'JetBrains Mono', monospace; color: #D8CFA9; background: rgba(255,255,255,0.04); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+  .tier-badge { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 8px; background: rgba(201,162,75,0.18); color: #C9A24B; margin-left: 6px; }
+  .footer { margin-top: 60px; color: #5A6E68; font-size: 12.5px; border-top: 1px solid rgba(201,162,75,0.1); padding-top: 18px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <svg class="star" width="420" height="420" viewBox="0 0 100 100">
+    <polygon points="50,2 61,35 95,35 68,56 79,90 50,70 21,90 32,56 5,35 39,35" fill="none" stroke="#C9A24B" stroke-width="0.6" />
+    <polygon points="50,15 58,38 82,38 62,53 70,77 50,62 30,77 38,53 18,38 42,38" fill="none" stroke="#C9A24B" stroke-width="0.4" />
+  </svg>
+
+  <div class="eyebrow">ILM API — DOCUMENTATION</div>
+  <h1>A unified home for Quran, Hadith, and Islamic scholarship</h1>
+  <p class="lede">
+    Built for researchers, scholars, and students — Quran with multiple translations and tafsir,
+    all six canonical hadith collections, isnad chains, root-word morphology, thematic cross-references,
+    fiqh comparisons across madhabs, prayer times, and du'as. Free to start.
+  </p>
+
+  <div class="signup">
+    <label for="email">Get an API key</label>
+    <input type="email" id="email" placeholder="you@university.edu" />
+    <button onclick="signup()">Create free API key</button>
+    <div id="signup-result"></div>
+  </div>
+
+  <h2>Authentication</h2>
+  <p class="lede">Include your key as a header on every request:</p>
+  <p><code>x-api-key: ilm_your_key_here</code></p>
+  <p class="lede">Bookmarking and study lists use a separate, personal login (<code>POST /v1/auth/signup</code>) — not the developer key above.</p>
+
+  <h2>Quran</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
+    <tr><td>GET</td><td><code>/v1/quran/surahs</code></td><td>List all 114 surahs</td></tr>
+    <tr><td>GET</td><td><code>/v1/quran/:surah?translation=</code></td><td>Full surah with a chosen translation</td></tr>
+    <tr><td>GET</td><td><code>/v1/quran/:surah/:ayah</code></td><td>Single ayah</td></tr>
+    <tr><td>GET</td><td><code>/v1/quran/:surah/:ayah/words</code></td><td>Word-by-word: Arabic, root, grammar</td></tr>
+    <tr><td>GET</td><td><code>/v1/quran/:surah/:ayah/cite?format=bibtex|apa</code></td><td>Citation export</td></tr>
+    <tr><td>GET</td><td><code>/v1/quran/:surah/:ayah/audio?reciter=</code></td><td>Recitation audio URL</td></tr>
+    <tr><td>GET</td><td><code>/v1/quran/translations</code></td><td>Includes a simplified/beginner option</td></tr>
+    <tr><td>GET</td><td><code>/v1/quran/export?translation=</code></td><td>Full Quran dataset <span class="tier-badge">academic/pro</span></td></tr>
+  </table>
+
+  <h2>Tafsir & Root Words</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
+    <tr><td>GET</td><td><code>/v1/tafsir/:surah/:ayah?source=</code></td><td>Ibn Kathir, Maarif-ul-Quran</td></tr>
+    <tr><td>GET</td><td><code>/v1/roots/:root/occurrences</code></td><td>Every ayah where an Arabic root appears</td></tr>
+  </table>
+
+  <h2>Hadith</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/collections</code></td><td>All six canonical collections</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/search?q=</code></td><td>Full-text search</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/:collection/:number</code></td><td>Single hadith</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/:collection/:number/isnad</code></td><td>Narrator chain</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/:collection/:number/cite?format=</code></td><td>Citation export</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/export?collection=</code></td><td>Full collection dataset <span class="tier-badge">academic/pro</span></td></tr>
+  </table>
+
+  <h2>Cross-Referencing & Fiqh</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
+    <tr><td>GET</td><td><code>/v1/topics</code></td><td>Thematic index</td></tr>
+    <tr><td>GET</td><td><code>/v1/topics/:slug</code></td><td>Ayahs + hadith tagged under a topic</td></tr>
+    <tr><td>GET</td><td><code>/v1/fiqh/search?topic=</code></td><td>Rulings compared across madhabs</td></tr>
+  </table>
+
+  <h2>Prayer Times & Du'as</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
+    <tr><td>GET</td><td><code>/v1/prayer-times?lat=&lng=&date=&method=</code></td><td>Computed, no external dependency</td></tr>
+    <tr><td>GET</td><td><code>/v1/duas/categories</code></td><td>List du'a categories</td></tr>
+    <tr><td>GET</td><td><code>/v1/duas/:category</code></td><td>Du'as in a category</td></tr>
+  </table>
+
+  <h2>Personal Accounts</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
+    <tr><td>POST</td><td><code>/v1/auth/signup</code></td><td>Create a personal account</td></tr>
+    <tr><td>POST</td><td><code>/v1/auth/login</code></td><td>Returns a JWT for bookmarks</td></tr>
+    <tr><td>GET/POST</td><td><code>/v1/bookmarks</code></td><td>Save ayahs, hadith, du'as</td></tr>
+    <tr><td>GET/POST</td><td><code>/v1/bookmarks/lists</code></td><td>Organize bookmarks into study lists</td></tr>
+  </table>
+
+  <div class="footer">
+    Ilm API — built for the Muslim research and student community. Full source and self-hosting
+    instructions in the project README.
+  </div>
+</div>
+
+<script>
+async function signup() {
+  const email = document.getElementById('email').value.trim();
+  const resultEl = document.getElementById('signup-result');
+  if (!email) { resultEl.textContent = 'Enter an email first.'; return; }
+
+  resultEl.textContent = 'Creating key...';
+  try {
+    const res = await fetch('/v1/developers/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email }),
+    });
+    const data = await res.json();
+    if (!res.ok) { resultEl.textContent = 'Error: ' + (data.error || 'signup failed'); return; }
+    resultEl.textContent = 'Your key: ' + data.key + '  (tier: ' + data.tier + ')';
+  } catch (err) {
+    resultEl.textContent = 'Network error — is the API server running?';
+  }
+}
+</script>
+</body>
+</html>
