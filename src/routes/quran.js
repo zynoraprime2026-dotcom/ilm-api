@@ -64,8 +64,8 @@ router.get('/:surah', async (req, res) => {
   const ayahsResult = await db.query(
     `SELECT a.ayah_number, a.text_arabic, at.text AS translation
      FROM ayahs a
-     LEFT JOIN ayah_translations at ON at.ayah_id = a.id
-     LEFT JOIN translations t ON t.id = at.translation_id AND t.code = $2
+     JOIN translations t ON t.code = $2
+     LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
      WHERE a.surah_number = $1
      ORDER BY a.ayah_number`,
     [surahNum, translationCode]
