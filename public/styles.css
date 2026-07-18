@@ -1,0 +1,35 @@
+@import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+* { box-sizing: border-box; }
+body {
+  margin: 0; background: #0E2A2B; color: #F3ECDA;
+  font-family: 'Work Sans', sans-serif; line-height: 1.6;
+}
+a { color: #C9A24B; }
+.wrap { max-width: 980px; margin: 0 auto; padding: 48px 24px 80px; position: relative; }
+.star { position: absolute; top: -100px; right: -100px; opacity: 0.06; animation: spin 60s linear infinite; transform-origin: center; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.eyebrow { color: #C9A24B; font-size: 12px; letter-spacing: 2px; font-weight: 600; }
+h1 { font-family: 'Amiri', serif; font-style: italic; font-size: 40px; margin: 10px 0 14px; }
+.lede { color: #A8967A; font-size: 15.5px; max-width: 640px; }
+.signup {
+  margin-top: 28px; background: rgba(243,236,218,0.04); border: 1px solid rgba(201,162,75,0.2);
+  border-radius: 10px; padding: 22px; max-width: 480px;
+}
+.signup label { display: block; font-size: 12px; color: #A8967A; margin-bottom: 6px; }
+.signup input {
+  width: 100%; background: #0E2A2B; color: #F3ECDA; border: 1px solid rgba(201,162,75,0.3);
+  border-radius: 6px; padding: 9px 12px; font-size: 14px; margin-bottom: 12px;
+}
+.signup button {
+  background: #1F6F5C; color: #F3ECDA; border: none; border-radius: 6px;
+  padding: 10px 20px; font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.signup button:hover { filter: brightness(1.08); }
+#signup-result { margin-top: 14px; font-family: 'JetBrains Mono', monospace; font-size: 12.5px; color: #5FBFA0; word-break: break-all; }
+h2 { font-family: 'Amiri', serif; font-style: italic; font-size: 24px; color: #F3ECDA; margin: 56px 0 18px; border-bottom: 1px solid rgba(201,162,75,0.15); padding-bottom: 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+th { text-align: left; color: #C9A24B; font-weight: 600; padding: 8px 10px; font-size: 12px; letter-spacing: 0.5px; }
+td { padding: 8px 10px; border-top: 1px solid rgba(201,162,75,0.1); vertical-align: top; }
+code { font-family: 'JetBrains Mono', monospace; color: #D8CFA9; background: rgba(255,255,255,0.04); padding: 1px 6px; border-radius: 4px; font-size: 12.5px; }
+.tier-badge { display: inline-block; font-size: 10px; padding: 1px 7px; border-radius: 8px; background: rgba(201,162,75,0.18); color: #C9A24B; margin-left: 6px; }
+.footer { margin-top: 60px; color: #5A6E68; font-size: 12.5px; border-top: 1px solid rgba(201,162,75,0.1); padding-top: 18px; }
