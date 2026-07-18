@@ -7,16 +7,16 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "seed:quran": "node scripts/seedQuran.js",
-    "seed:tafsir": "node scripts/seedTafsir.js",
-    "seed:hadith": "node scripts/seedHadith.js",
-    "seed:narrators": "node scripts/seedNarrators.js",
-    "seed:roots": "node scripts/seedRootWords.js",
-    "seed:topics": "node scripts/seedTopics.js",
-    "seed:fiqh": "node scripts/seedFiqh.js",
-    "seed:reciters": "node scripts/seedReciters.js",
-    "seed:duas": "node scripts/seedDuas.js",
-    "migrate": "node scripts/migrate.js"
+    "seed:quran": "node scripts/seedQuran.cjs",
+    "seed:tafsir": "node scripts/seedTafsir.cjs",
+    "seed:hadith": "node scripts/seedHadith.cjs",
+    "seed:narrators": "node scripts/seedNarrators.cjs",
+    "seed:roots": "node scripts/seedRootWords.cjs",
+    "seed:topics": "node scripts/seedTopics.cjs",
+    "seed:fiqh": "node scripts/seedFiqh.cjs",
+    "seed:reciters": "node scripts/seedReciters.cjs",
+    "seed:duas": "node scripts/seedDuas.cjs",
+    "migrate": "node scripts/migrate.cjs"
   },
   "dependencies": {
     "express": "^4.19.2",
