@@ -22,7 +22,16 @@ const path = require('path');
 
 const app = express();
 
-app.use(helmet());
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      ...require('helmet').contentSecurityPolicy.getDefaultDirectives(),
+      // Allow Google Fonts stylesheet
+      'style-src': ["'self'", 'https://fonts.googleapis.com'],
+      'font-src': ["'self'", 'https://fonts.gstatic.com'],
+    },
+  },
+}));
 app.use(compression());
 app.use(cors());
 app.use(express.json());
@@ -34,6 +43,10 @@ const limiter = rateLimit({
   legacyHeaders: false,
 });
 app.use(limiter);
+
+// Serve static docs/landing page
+app.use(express.static(path.join(__dirname, '..', 'public')));
+app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 
 // Public health check — no API key needed
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'ilm-api' }));
