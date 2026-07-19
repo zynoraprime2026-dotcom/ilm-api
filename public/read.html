@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ilm API — Read</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #0E2A2B; color: #F3ECDA;
+    font-family: 'Work Sans', sans-serif; line-height: 1.6;
+  }
+  a { color: #C9A24B; text-decoration: none; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
+  .eyebrow { color: #C9A24B; font-size: 12px; letter-spacing: 2px; font-weight: 600; }
+  h1 { font-family: 'Amiri', serif; font-style: italic; font-size: 32px; margin: 10px 0 8px; }
+  .lede { color: #A8967A; font-size: 14.5px; max-width: 600px; margin-bottom: 24px; }
+  .nav-back { display: inline-block; margin-bottom: 18px; font-size: 13px; color: #A8967A; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid rgba(201,162,75,0.15); }
+  .tab {
+    padding: 10px 16px; font-size: 14px; color: #A8967A; cursor: pointer;
+    border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none;
+    font-family: 'Work Sans', sans-serif;
+  }
+  .tab.active { color: #C9A24B; border-bottom-color: #C9A24B; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+  .controls {
+    background: rgba(243,236,218,0.04); border: 1px solid rgba(201,162,75,0.18);
+    border-radius: 10px; padding: 18px; margin-bottom: 20px;
+  }
+  .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  select, input {
+    background: #0E2A2B; color: #F3ECDA; border: 1px solid rgba(201,162,75,0.3);
+    border-radius: 6px; padding: 9px 12px; font-size: 14px; font-family: 'Work Sans', sans-serif; flex: 1; min-width: 140px;
+  }
+  button {
+    background: #1F6F5C; color: #F3ECDA; border: none; border-radius: 6px;
+    padding: 10px 20px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Work Sans', sans-serif;
+  }
+  button:hover { filter: brightness(1.08); }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .ayah-card, .hadith-card {
+    background: rgba(243,236,218,0.03); border: 1px solid rgba(201,162,75,0.12);
+    border-radius: 8px; padding: 16px 18px; margin-bottom: 12px;
+  }
+  .ayah-num, .hadith-num {
+    display: inline-block; color: #C9A24B; font-size: 11px; letter-spacing: 1px;
+    font-family: 'JetBrains Mono', monospace; margin-bottom: 8px;
+  }
+  .arabic { font-family: 'Amiri', serif; font-size: 22px; text-align: right; direction: rtl; line-height: 1.9; margin-bottom: 10px; color: #F3ECDA; }
+  .translation { color: #D8CFA9; font-size: 14.5px; }
+  .status { color: #6B8F82; font-size: 13px; font-style: italic; padding: 12px 0; }
+  .error { color: #C1533D; font-size: 13px; padding: 12px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="nav-back" href="/">&larr; Back to documentation</a>
+  <div class="eyebrow">ILM API — READ</div>
+  <h1>Read the Quran &amp; search Hadith</h1>
+  <p class="lede">No account or technical knowledge needed — just pick a surah or search a topic.</p>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="quran">Quran</button>
+    <button class="tab" data-tab="hadith">Hadith Search</button>
+  </div>
+
+  <div class="panel active" id="panel-quran">
+    <div class="controls">
+      <div class="row">
+        <select id="surah-select"></select>
+        <select id="translation-select">
+          <option value="en.sahih">Saheeh International</option>
+          <option value="en.yusufali">Abdullah Yusuf Ali</option>
+          <option value="en.pickthall">M. M. Pickthall</option>
+          <option value="en.hilali">Hilali &amp; Khan</option>
+          <option value="en.clearquran">The Clear Quran (simplified)</option>
+        </select>
+      </div>
+      <button id="quran-read-btn">Read Surah</button>
+    </div>
+    <div id="quran-results"></div>
+  </div>
+
+  <div class="panel" id="panel-hadith">
+    <div class="controls">
+      <div class="row">
+        <input id="hadith-query" type="text" placeholder="Search hadith — e.g. patience, charity, intention" />
+        <button id="hadith-search-btn">Search</button>
+      </div>
+    </div>
+    <div id="hadith-results"></div>
+  </div>
+</div>
+
+<script>
+const API_BASE = ''; // same origin
+let apiKey = null;
+
+const SURAHS = [
+  "Al-Fatihah","Al-Baqarah","Aal-E-Imran","An-Nisa","Al-Ma'idah","Al-An'am","Al-A'raf","Al-Anfal","At-Tawbah","Yunus",
+  "Hud","Yusuf","Ar-Ra'd","Ibrahim","Al-Hijr","An-Nahl","Al-Isra","Al-Kahf","Maryam","Ta-Ha",
+  "Al-Anbiya","Al-Hajj","Al-Mu'minun","An-Nur","Al-Furqan","Ash-Shu'ara","An-Naml","Al-Qasas","Al-Ankabut","Ar-Rum",
+  "Luqman","As-Sajdah","Al-Ahzab","Saba","Fatir","Ya-Sin","As-Saffat","Sad","Az-Zumar","Ghafir",
+  "Fussilat","Ash-Shuraa","Az-Zukhruf","Ad-Dukhan","Al-Jathiyah","Al-Ahqaf","Muhammad","Al-Fath","Al-Hujurat","Qaf",
+  "Adh-Dhariyat","At-Tur","An-Najm","Al-Qamar","Ar-Rahman","Al-Waqi'ah","Al-Hadid","Al-Mujadila","Al-Hashr","Al-Mumtahanah",
+  "As-Saf","Al-Jumu'ah","Al-Munafiqun","At-Taghabun","At-Talaq","At-Tahrim","Al-Mulk","Al-Qalam","Al-Haqqah","Al-Ma'arij",
+  "Nuh","Al-Jinn","Al-Muzzammil","Al-Muddaththir","Al-Qiyamah","Al-Insan","Al-Mursalat","An-Naba","An-Nazi'at","Abasa",
+  "At-Takwir","Al-Infitar","Al-Mutaffifin","Al-Inshiqaq","Al-Buruj","At-Tariq","Al-A'la","Al-Ghashiyah","Al-Fajr","Al-Balad",
+  "Ash-Shams","Al-Layl","Ad-Duhaa","Ash-Sharh","At-Tin","Al-Alaq","Al-Qadr","Al-Bayyinah","Az-Zalzalah","Al-Adiyat",
+  "Al-Qari'ah","At-Takathur","Al-Asr","Al-Humazah","Al-Fil","Quraysh","Al-Ma'un","Al-Kawthar","Al-Kafirun","An-Nasr",
+  "Al-Masad","Al-Ikhlas","Al-Falaq","An-Nas"
+];
+
+function populateSurahSelect() {
+  const select = document.getElementById('surah-select');
+  SURAHS.forEach((name, i) => {
+    const opt = document.createElement('option');
+    opt.value = i + 1;
+    opt.textContent = `${i + 1}. ${name}`;
+    select.appendChild(opt);
+  });
+}
+
+async function ensureApiKey() {
+  if (apiKey) return apiKey;
+  const stored = sessionStorage.getItem('ilm_reader_key');
+  if (stored) { apiKey = stored; return apiKey; }
+
+  const randomEmail = `reader-${Math.random().toString(36).slice(2)}@anonymous.local`;
+  const res = await fetch(`${API_BASE}/v1/developers/signup`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: randomEmail }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Could not set up reader access');
+  apiKey = data.key;
+  sessionStorage.setItem('ilm_reader_key', apiKey);
+  return apiKey;
+}
+
+async function apiGet(path) {
+  const key = await ensureApiKey();
+  const res = await fetch(`${API_BASE}${path}`, { headers: { 'x-api-key': key } });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+
+document.querySelectorAll('.tab').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+  });
+});
+
+document.getElementById('quran-read-btn').addEventListener('click', async () => {
+  const surah = document.getElementById('surah-select').value;
+  const translation = document.getElementById('translation-select').value;
+  const resultsEl = document.getElementById('quran-results');
+  resultsEl.innerHTML = '<div class="status">Loading…</div>';
+
+  try {
+    const data = await apiGet(`/v1/quran/${surah}?translation=${translation}`);
+    resultsEl.innerHTML = data.ayahs.map((a) => `
+      <div class="ayah-card">
+        <div class="ayah-num">${data.surah.name_english.toUpperCase()} — AYAH ${a.ayah_number}</div>
+        <div class="arabic">${a.text_arabic}</div>
+        <div class="translation">${a.translation || '(no translation available)'}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    resultsEl.innerHTML = `<div class="error">Couldn't load this surah: ${err.message}</div>`;
+  }
+});
+
+document.getElementById('hadith-search-btn').addEventListener('click', async () => {
+  const q = document.getElementById('hadith-query').value.trim();
+  const resultsEl = document.getElementById('hadith-results');
+  if (!q) { resultsEl.innerHTML = '<div class="error">Type something to search for.</div>'; return; }
+  resultsEl.innerHTML = '<div class="status">Searching…</div>';
+
+  try {
+    const data = await apiGet(`/v1/hadith/search?q=${encodeURIComponent(q)}`);
+    if (data.results.length === 0) {
+      resultsEl.innerHTML = '<div class="status">No results found.</div>';
+      return;
+    }
+    resultsEl.innerHTML = data.results.map((h) => `
+      <div class="hadith-card">
+        <div class="hadith-num">${h.collection.toUpperCase()} — #${h.hadith_number}${h.narrator ? ' — ' + h.narrator : ''}</div>
+        <div class="translation">${h.text_english}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    resultsEl.innerHTML = `<div class="error">Search failed: ${err.message}</div>`;
+  }
+});
+
+populateSurahSelect();
+</script>
+</body>
+</html>
