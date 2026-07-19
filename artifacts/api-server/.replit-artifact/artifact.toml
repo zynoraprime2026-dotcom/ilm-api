@@ -1,13 +1,17 @@
-kind = "api"
-previewPath = "/api" # TODO - should be excluded from preview in the first place
-title = "API Server"
+kind = "web"
+previewPath = "/"
+title = "Ilm API"
 version = "1.0.0"
-id = "3B4_FFSkEVBkAeYMFRJ2e"
+id = "artifacts/api-server"
+router = "path"
 
 [[services]]
-localPort = 8080
-name = "API Server"
-paths = ["/"]
+name = "web"
+paths = [ "/" ]
+localPort = 22729
+
+[services.env]
+PORT = "22729"
 
 [services.development]
 run = "node /home/runner/workspace/src/server.js"
