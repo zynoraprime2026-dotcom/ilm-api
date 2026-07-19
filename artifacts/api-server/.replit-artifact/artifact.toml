@@ -18,10 +18,9 @@ run = "node /home/runner/workspace/src/server.js"
 args = ["echo", "no-build"]
 
 [services.production.run]
-args = ["node", "/home/runner/workspace/src/server.js"]
+args = ["npm", "start"]
 
 [services.production.run.env]
-PORT = "8080"
 NODE_ENV = "production"
 
 [services.production.health.startup]

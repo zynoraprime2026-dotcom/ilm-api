@@ -7,6 +7,7 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
+    "postinstall": "node -e \"require('fs').writeFileSync('node_modules/adhan/lib/cjs/package.json', '{\\\"type\\\":\\\"commonjs\\\"}')\"",
     "seed:quran": "node scripts/seedQuran.cjs",
     "seed:tafsir": "node scripts/seedTafsir.cjs",
     "seed:hadith": "node scripts/seedHadith.cjs",
