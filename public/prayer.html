@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ilm API — Prayer Companion</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: #0E2A2B; color: #F3ECDA;
+    font-family: 'Work Sans', sans-serif; line-height: 1.6;
+  }
+  a { color: #C9A24B; text-decoration: none; }
+  .wrap { max-width: 640px; margin: 0 auto; padding: 40px 20px 80px; }
+  .eyebrow { color: #C9A24B; font-size: 12px; letter-spacing: 2px; font-weight: 600; }
+  h1 { font-family: 'Amiri', serif; font-style: italic; font-size: 30px; margin: 10px 0 8px; }
+  .lede { color: #A8967A; font-size: 14px; margin-bottom: 22px; }
+  .nav-back { display: inline-block; margin-bottom: 18px; font-size: 13px; color: #A8967A; }
+  .controls {
+    background: rgba(243,236,218,0.04); border: 1px solid rgba(201,162,75,0.18);
+    border-radius: 10px; padding: 18px; margin-bottom: 22px;
+  }
+  .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+  select, input {
+    background: #0E2A2B; color: #F3ECDA; border: 1px solid rgba(201,162,75,0.3);
+    border-radius: 6px; padding: 9px 12px; font-size: 14px; font-family: 'Work Sans', sans-serif; flex: 1; min-width: 120px;
+  }
+  button {
+    background: #1F6F5C; color: #F3ECDA; border: none; border-radius: 6px;
+    padding: 10px 18px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Work Sans', sans-serif;
+  }
+  button:hover { filter: brightness(1.08); }
+  button.secondary { background: rgba(201,162,75,0.15); color: #C9A24B; }
+  .loc-status { color: #6B8F82; font-size: 12.5px; font-style: italic; margin-top: 6px; }
+  .times-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 24px; }
+  .time-card {
+    background: rgba(243,236,218,0.03); border: 1px solid rgba(201,162,75,0.12);
+    border-radius: 8px; padding: 14px; text-align: center;
+  }
+  .time-name { color: #C9A24B; font-size: 11px; letter-spacing: 1.5px; margin-bottom: 6px; }
+  .time-value { font-family: 'JetBrains Mono', monospace; font-size: 18px; color: #F3ECDA; }
+  .qibla-card {
+    background: rgba(243,236,218,0.03); border: 1px solid rgba(201,162,75,0.18);
+    border-radius: 10px; padding: 24px; text-align: center; margin-bottom: 20px;
+  }
+  .qibla-label { color: #C9A24B; font-size: 12px; letter-spacing: 1.5px; margin-bottom: 16px; }
+  .compass { width: 140px; height: 140px; margin: 0 auto 14px; position: relative; }
+  .compass-ring {
+    width: 100%; height: 100%; border-radius: 50%; border: 2px solid rgba(201,162,75,0.3);
+    position: relative;
+  }
+  .compass-n { position: absolute; top: 4px; left: 50%; transform: translateX(-50%); font-size: 10px; color: #6B8F82; }
+  .compass-needle {
+    position: absolute; top: 50%; left: 50%; width: 3px; height: 55px;
+    background: linear-gradient(to top, transparent, #C9A24B); transform-origin: bottom center;
+  }
+  .compass-center { position: absolute; top: 50%; left: 50%; width: 8px; height: 8px; background: #C9A24B; border-radius: 50%; transform: translate(-50%, -50%); }
+  .qibla-degrees { font-family: 'JetBrains Mono', monospace; font-size: 22px; color: #F3ECDA; }
+  .qibla-note { color: #A8967A; font-size: 12px; margin-top: 8px; }
+  .status { color: #6B8F82; font-size: 13px; font-style: italic; padding: 10px 0; }
+  .error { color: #C1533D; font-size: 13px; padding: 10px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="nav-back" href="/">&larr; Back to documentation</a>
+  <div class="eyebrow">ILM API — PRAYER COMPANION</div>
+  <h1>Prayer times &amp; Qibla direction</h1>
+  <p class="lede">Computed for your exact location — no account needed.</p>
+
+  <div class="controls">
+    <div class="row">
+      <button id="locate-btn">Use my location</button>
+      <button class="secondary" id="manual-toggle">Enter manually</button>
+    </div>
+    <div class="row" id="manual-inputs" style="display:none;">
+      <input id="lat-input" type="text" placeholder="Latitude (e.g. 21.4225)" />
+      <input id="lng-input" type="text" placeholder="Longitude (e.g. 39.8262)" />
+    </div>
+    <div class="row">
+      <select id="method-select">
+        <option value="MuslimWorldLeague">Muslim World League</option>
+        <option value="Egyptian">Egyptian</option>
+        <option value="Karachi">Karachi</option>
+        <option value="UmmAlQura">Umm Al-Qura (Makkah)</option>
+        <option value="NorthAmerica">ISNA (North America)</option>
+      </select>
+      <input id="date-input" type="date" />
+    </div>
+    <div id="loc-status" class="loc-status">Location not set yet.</div>
+  </div>
+
+  <div id="results"></div>
+</div>
+
+<script>
+const API_BASE = '';
+let apiKey = null;
+let currentLat = null, currentLng = null, currentTzOffset = null;
+
+async function ensureApiKey() {
+  if (apiKey) return apiKey;
+  const stored = sessionStorage.getItem('ilm_reader_key');
+  if (stored) { apiKey = stored; return apiKey; }
+  const randomEmail = `prayer-${Math.random().toString(36).slice(2)}@anonymous.local`;
+  const res = await fetch(`${API_BASE}/v1/developers/signup`, {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email: randomEmail }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Could not set up access');
+  apiKey = data.key;
+  sessionStorage.setItem('ilm_reader_key', apiKey);
+  return apiKey;
+}
+
+function bearingToQibla(lat, lng) {
+  const MECCA_LAT = 21.4225, MECCA_LNG = 39.8262;
+  const toRad = (d) => d * Math.PI / 180;
+  const toDeg = (r) => r * 180 / Math.PI;
+  const phi1 = toRad(lat), phi2 = toRad(MECCA_LAT);
+  const deltaLambda = toRad(MECCA_LNG - lng);
+  const y = Math.sin(deltaLambda) * Math.cos(phi2);
+  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(deltaLambda);
+  let bearing = toDeg(Math.atan2(y, x));
+  return (bearing + 360) % 360;
+}
+
+function setDefaultDate() {
+  const today = new Date();
+  document.getElementById('date-input').value = today.toISOString().split('T')[0];
+}
+
+document.getElementById('manual-toggle').addEventListener('click', () => {
+  const el = document.getElementById('manual-inputs');
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+});
+
+document.getElementById('locate-btn').addEventListener('click', () => {
+  const statusEl = document.getElementById('loc-status');
+  if (!navigator.geolocation) {
+    statusEl.textContent = 'Geolocation not supported in this browser — enter coordinates manually.';
+    return;
+  }
+  statusEl.textContent = 'Locating…';
+  navigator.geolocation.getCurrentPosition(
+    (pos) => {
+      currentLat = pos.coords.latitude;
+      currentLng = pos.coords.longitude;
+      currentTzOffset = -new Date().getTimezoneOffset() / 60;
+      statusEl.textContent = `Location set: ${currentLat.toFixed(3)}, ${currentLng.toFixed(3)}`;
+      loadPrayerTimes();
+    },
+    () => { statusEl.textContent = 'Could not get your location — enter coordinates manually instead.'; }
+  );
+});
+
+document.getElementById('method-select').addEventListener('change', () => { if (currentLat) loadPrayerTimes(); });
+document.getElementById('date-input').addEventListener('change', () => { if (currentLat) loadPrayerTimes(); });
+document.getElementById('lat-input').addEventListener('change', tryManualLoad);
+document.getElementById('lng-input').addEventListener('change', tryManualLoad);
+
+function tryManualLoad() {
+  const lat = parseFloat(document.getElementById('lat-input').value);
+  const lng = parseFloat(document.getElementById('lng-input').value);
+  if (!isNaN(lat) && !isNaN(lng)) {
+    currentLat = lat; currentLng = lng;
+    currentTzOffset = -new Date().getTimezoneOffset() / 60;
+    document.getElementById('loc-status').textContent = `Location set: ${lat.toFixed(3)}, ${lng.toFixed(3)}`;
+    loadPrayerTimes();
+  }
+}
+
+async function loadPrayerTimes() {
+  const resultsEl = document.getElementById('results');
+  resultsEl.innerHTML = '<div class="status">Calculating…</div>';
+
+  try {
+    const key = await ensureApiKey();
+    const method = document.getElementById('method-select').value;
+    const date = document.getElementById('date-input').value;
+    const res = await fetch(
+      `${API_BASE}/v1/prayer-times?lat=${currentLat}&lng=${currentLng}&date=${date}&method=${method}`,
+      { headers: { 'x-api-key': key } }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Could not calculate prayer times');
+
+    const qiblaBearing = bearingToQibla(currentLat, currentLng);
+    const times = data.times;
+
+    resultsEl.innerHTML = `
+      <div class="qibla-card">
+        <div class="qibla-label">QIBLA DIRECTION</div>
+        <div class="compass">
+          <div class="compass-ring">
+            <div class="compass-n">N</div>
+            <div class="compass-needle" style="transform: translate(-50%, -100%) rotate(${qiblaBearing}deg);"></div>
+            <div class="compass-center"></div>
+          </div>
+        </div>
+        <div class="qibla-degrees">${qiblaBearing.toFixed(1)}°</div>
+        <div class="qibla-note">Bearing from true north — hold your phone flat and align 0° with north</div>
+      </div>
+      <div class="times-grid">
+        ${['fajr','sunrise','dhuhr','asr','maghrib','isha'].map((p) => `
+          <div class="time-card">
+            <div class="time-name">${p.toUpperCase()}</div>
+            <div class="time-value">${times[p]}</div>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  } catch (err) {
+    resultsEl.innerHTML = `<div class="error">${err.message}</div>`;
+  }
+}
+
+setDefaultDate();
+</script>
+</body>
+</html>
