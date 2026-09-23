@@ -6,25 +6,37 @@ const adhan = require('adhan');
 router.get('/', (req, res) => {
   const { lat, lng, date, method } = req.query;
 
-  if (!lat || !lng) {
+  const latitude = Number(lat);
+  const longitude = Number(lng);
+
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
     return res.status(400).json({ error: 'lat and lng query params are required' });
   }
 
-  const coordinates = new adhan.Coordinates(parseFloat(lat), parseFloat(lng));
+  if (latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+    return res.status(400).json({ error: 'lat must be between -90 and 90 and lng between -180 and 180' });
+  }
+
   const targetDate = date ? new Date(date) : new Date();
+  if (Number.isNaN(targetDate.getTime())) {
+    return res.status(400).json({ error: 'date must be a valid date in YYYY-MM-DD format' });
+  }
 
   // Available methods: MuslimWorldLeague, Egyptian, Karachi, UmmAlQura,
   // Dubai, MoonsightingCommittee, NorthAmerica (ISNA), Kuwait, Qatar, Singapore, Tehran, Turkey
   const methodName = method || 'MuslimWorldLeague';
-  const params = adhan.CalculationMethod[methodName]
-    ? adhan.CalculationMethod[methodName]()
-    : adhan.CalculationMethod.MuslimWorldLeague();
+  if (!adhan.CalculationMethod[methodName]) {
+    return res.status(400).json({ error: `Unknown calculation method: ${methodName}` });
+  }
+
+  const coordinates = new adhan.Coordinates(latitude, longitude);
+  const params = adhan.CalculationMethod[methodName]();
 
   const prayerTimes = new adhan.PrayerTimes(coordinates, targetDate, params);
 
   res.json({
     date: targetDate.toISOString().split('T')[0],
-    coordinates: { lat: parseFloat(lat), lng: parseFloat(lng) },
+    coordinates: { lat: latitude, lng: longitude },
     method: methodName,
     times: {
       fajr: prayerTimes.fajr,

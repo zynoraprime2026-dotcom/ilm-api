@@ -5,7 +5,16 @@ const { getCached, setCached } = require('../config/cache');
 
 // GET /v1/duas/categories
 router.get('/categories', async (req, res) => {
-  const { rows } = await db.query('SELECT * FROM dua_categories ORDER BY name');
+  const { rows } = await db.query(
+    `SELECT c.*
+     FROM dua_categories c
+     WHERE EXISTS (
+       SELECT 1
+       FROM duas d
+       WHERE d.category_id = c.id
+     )
+     ORDER BY c.name`
+  );
   res.json(rows);
 });
 

@@ -8,70 +8,49 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
   * { box-sizing: border-box; }
-  body {
-    margin: 0; background: #0E2A2B; color: #F3ECDA;
-    font-family: 'Work Sans', sans-serif; line-height: 1.6;
-  }
+  body { margin: 0; background: #0E2A2B; color: #F3ECDA; font-family: 'Work Sans', sans-serif; line-height: 1.6; }
   a { color: #C9A24B; text-decoration: none; }
   .wrap { max-width: 760px; margin: 0 auto; padding: 40px 20px 80px; }
   .eyebrow { color: #C9A24B; font-size: 12px; letter-spacing: 2px; font-weight: 600; }
-  h1 { font-family: 'Amiri', serif; font-style: italic; font-size: 32px; margin: 10px 0 8px; }
-  .lede { color: #A8967A; font-size: 14.5px; max-width: 600px; margin-bottom: 24px; }
-  .nav-back { display: inline-block; margin-bottom: 18px; font-size: 13px; color: #A8967A; }
-  .nav-links { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; font-size: 13px; }
-  .nav-links a { color: #A8967A; }
-  .nav-links a:hover { color: #C9A24B; }
-  .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid rgba(201,162,75,0.15); }
-  .tab {
-    padding: 10px 16px; font-size: 14px; color: #A8967A; cursor: pointer;
-    border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none;
-    font-family: 'Work Sans', sans-serif;
-  }
+  h1 { font-family: 'Amiri', serif; font-style: italic; font-size: 30px; margin: 10px 0 8px; }
+  .lede { color: #A8967A; font-size: 14px; max-width: 600px; margin-bottom: 20px; }
+  .nav-back { display: inline-block; margin-bottom: 8px; font-size: 13px; color: #A8967A; }
+  .nav-links { margin-bottom: 18px; font-size: 13px; }
+  .tabs { display: flex; gap: 2px; margin-bottom: 20px; border-bottom: 1px solid rgba(201,162,75,0.15); flex-wrap: wrap; }
+  .tab { padding: 9px 13px; font-size: 13px; color: #A8967A; cursor: pointer; border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; font-family: 'Work Sans', sans-serif; }
   .tab.active { color: #C9A24B; border-bottom-color: #C9A24B; }
   .panel { display: none; }
   .panel.active { display: block; }
-  .controls {
-    background: rgba(243,236,218,0.04); border: 1px solid rgba(201,162,75,0.18);
-    border-radius: 10px; padding: 18px; margin-bottom: 20px;
-  }
+  .controls { background: rgba(243,236,218,0.04); border: 1px solid rgba(201,162,75,0.18); border-radius: 10px; padding: 18px; margin-bottom: 20px; }
   .row { display: flex; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
-  select, input {
-    background: #0E2A2B; color: #F3ECDA; border: 1px solid rgba(201,162,75,0.3);
-    border-radius: 6px; padding: 9px 12px; font-size: 14px; font-family: 'Work Sans', sans-serif; flex: 1; min-width: 140px;
-  }
-  button {
-    background: #1F6F5C; color: #F3ECDA; border: none; border-radius: 6px;
-    padding: 10px 20px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Work Sans', sans-serif;
-  }
+  select, input { background: #0E2A2B; color: #F3ECDA; border: 1px solid rgba(201,162,75,0.3); border-radius: 6px; padding: 9px 12px; font-size: 14px; font-family: 'Work Sans', sans-serif; flex: 1; min-width: 120px; }
+  button { background: #1F6F5C; color: #F3ECDA; border: none; border-radius: 6px; padding: 10px 20px; font-size: 14px; font-weight: 500; cursor: pointer; font-family: 'Work Sans', sans-serif; }
   button:hover { filter: brightness(1.08); }
-  button:disabled { opacity: 0.5; cursor: default; }
-  .ayah-card, .hadith-card {
-    background: rgba(243,236,218,0.03); border: 1px solid rgba(201,162,75,0.12);
-    border-radius: 8px; padding: 16px 18px; margin-bottom: 12px;
-  }
-  .ayah-num, .hadith-num {
-    display: inline-block; color: #C9A24B; font-size: 11px; letter-spacing: 1px;
-    font-family: 'JetBrains Mono', monospace; margin-bottom: 8px;
-  }
-  .arabic { font-family: 'Amiri', serif; font-size: 22px; text-align: right; direction: rtl; line-height: 1.9; margin-bottom: 10px; color: #F3ECDA; }
-  .translation { color: #D8CFA9; font-size: 14.5px; }
+  .card { background: rgba(243,236,218,0.03); border: 1px solid rgba(201,162,75,0.12); border-radius: 8px; padding: 16px 18px; margin-bottom: 12px; }
+  .card-label { display: block; color: #C9A24B; font-size: 11px; letter-spacing: 1px; font-family: 'JetBrains Mono', monospace; margin-bottom: 8px; }
+  .arabic { font-family: 'Amiri', serif; font-size: 22px; text-align: right; direction: rtl; line-height: 1.9; margin-bottom: 10px; }
+  .body-text { color: #D8CFA9; font-size: 14.5px; }
+  .note { color: #6B8F82; font-size: 12.5px; font-style: italic; margin-top: 8px; }
   .status { color: #6B8F82; font-size: 13px; font-style: italic; padding: 12px 0; }
   .error { color: #C1533D; font-size: 13px; padding: 12px 0; }
+  .madhab-tag { display: inline-block; background: rgba(201,162,75,0.15); color: #C9A24B; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="nav-links">
-    <a href="/">&larr; Back to documentation</a>
-    <a href="/prayer.html">Prayer times &amp; Qibla direction &rarr;</a>
-  </div>
+  <a class="nav-back" href="/">&larr; Back to documentation</a>
+  <div class="nav-links"><a href="/prayer.html">Prayer times &amp; Qibla direction →</a></div>
   <div class="eyebrow">ILM API — READ</div>
-  <h1>Read the Quran &amp; search Hadith</h1>
-  <p class="lede">No account or technical knowledge needed — just pick a surah or search a topic.</p>
+  <h1>Read &amp; search Islamic knowledge</h1>
+  <p class="lede">No account or technical knowledge needed. Note: hadith text is currently English-only (Arabic not yet seeded).</p>
 
   <div class="tabs">
     <button class="tab active" data-tab="quran">Quran</button>
-    <button class="tab" data-tab="hadith">Hadith Search</button>
+    <button class="tab" data-tab="tafsir">Tafsir</button>
+    <button class="tab" data-tab="hadith">Hadith</button>
+    <button class="tab" data-tab="isnad">Isnad</button>
+    <button class="tab" data-tab="duas">Du'as</button>
+    <button class="tab" data-tab="fiqh">Fiqh</button>
   </div>
 
   <div class="panel active" id="panel-quran">
@@ -91,6 +70,17 @@
     <div id="quran-results"></div>
   </div>
 
+  <div class="panel" id="panel-tafsir">
+    <div class="controls">
+      <div class="row">
+        <input id="tafsir-surah" type="number" placeholder="Surah (e.g. 2)" min="1" max="114" />
+        <input id="tafsir-ayah" type="number" placeholder="Ayah (e.g. 255)" min="1" />
+      </div>
+      <button id="tafsir-btn">Get Tafsir</button>
+    </div>
+    <div id="tafsir-results"></div>
+  </div>
+
   <div class="panel" id="panel-hadith">
     <div class="controls">
       <div class="row">
@@ -100,10 +90,48 @@
     </div>
     <div id="hadith-results"></div>
   </div>
+
+  <div class="panel" id="panel-isnad">
+    <div class="controls">
+      <div class="row">
+        <select id="isnad-collection">
+          <option value="bukhari">Sahih al-Bukhari</option>
+          <option value="muslim">Sahih Muslim</option>
+          <option value="abudawud">Sunan Abu Dawud</option>
+          <option value="tirmidhi">Jami at-Tirmidhi</option>
+          <option value="nasai">Sunan an-Nasa'i</option>
+          <option value="ibnmajah">Sunan Ibn Majah</option>
+        </select>
+        <input id="isnad-number" type="text" placeholder="Hadith number (e.g. 1)" />
+      </div>
+      <button id="isnad-btn">Get Narrator Chain</button>
+    </div>
+    <div id="isnad-results"></div>
+  </div>
+
+  <div class="panel" id="panel-duas">
+    <div class="controls">
+      <div class="row">
+        <select id="dua-category"></select>
+      </div>
+      <button id="dua-btn">Show Du'as</button>
+    </div>
+    <div id="dua-results"></div>
+  </div>
+
+  <div class="panel" id="panel-fiqh">
+    <div class="controls">
+      <div class="row">
+        <input id="fiqh-topic" type="text" placeholder="Topic — e.g. fasting, prayer" />
+        <button id="fiqh-btn">Compare Rulings</button>
+      </div>
+    </div>
+    <div id="fiqh-results"></div>
+  </div>
 </div>
 
 <script>
-const API_BASE = ''; // same origin
+const API_BASE = '';
 let apiKey = null;
 
 const SURAHS = [
@@ -125,21 +153,27 @@ function populateSurahSelect() {
   const select = document.getElementById('surah-select');
   SURAHS.forEach((name, i) => {
     const opt = document.createElement('option');
-    opt.value = i + 1;
-    opt.textContent = `${i + 1}. ${name}`;
+    opt.value = i + 1; opt.textContent = `${i + 1}. ${name}`;
     select.appendChild(opt);
   });
 }
+
+document.querySelectorAll('.tab').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
+  });
+});
 
 async function ensureApiKey() {
   if (apiKey) return apiKey;
   const stored = sessionStorage.getItem('ilm_reader_key');
   if (stored) { apiKey = stored; return apiKey; }
-
   const randomEmail = `reader-${Math.random().toString(36).slice(2)}@anonymous.local`;
   const res = await fetch(`${API_BASE}/v1/developers/signup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email: randomEmail }),
   });
   const data = await res.json();
@@ -152,64 +186,156 @@ async function ensureApiKey() {
 async function apiGet(path) {
   const key = await ensureApiKey();
   const res = await fetch(`${API_BASE}${path}`, { headers: { 'x-api-key': key } });
-  const data = await res.json();
+  const contentType = res.headers.get('content-type') || '';
+  const data = contentType.includes('application/json')
+    ? await res.json()
+    : { error: await res.text() };
   if (!res.ok) throw new Error(data.error || 'Request failed');
   return data;
 }
 
-document.querySelectorAll('.tab').forEach((tab) => {
-  tab.addEventListener('click', () => {
-    document.querySelectorAll('.tab').forEach((t) => t.classList.remove('active'));
-    document.querySelectorAll('.panel').forEach((p) => p.classList.remove('active'));
-    tab.classList.add('active');
-    document.getElementById(`panel-${tab.dataset.tab}`).classList.add('active');
-  });
-});
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (character) => ({
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;',
+  }[character]));
+}
 
+function showError(element, error, suffix = '') {
+  element.innerHTML = `<div class="error">${escapeHtml(error?.message || 'Something went wrong')}${escapeHtml(suffix)}</div>`;
+}
+
+// --- Quran ---
 document.getElementById('quran-read-btn').addEventListener('click', async () => {
   const surah = document.getElementById('surah-select').value;
   const translation = document.getElementById('translation-select').value;
-  const resultsEl = document.getElementById('quran-results');
-  resultsEl.innerHTML = '<div class="status">Loading…</div>';
-
+  const el = document.getElementById('quran-results');
+  el.innerHTML = '<div class="status">Loading…</div>';
   try {
-    const data = await apiGet(`/v1/quran/${surah}?translation=${encodeURIComponent(translation)}`);
-    resultsEl.innerHTML = data.ayahs.map((a) => `
-      <div class="ayah-card">
-        <div class="ayah-num">${data.surah.name_english.toUpperCase()} — AYAH ${a.ayah_number}</div>
-        <div class="arabic">${a.text_arabic}</div>
-        <div class="translation">${a.translation || '(no translation available)'}</div>
-      </div>
-    `).join('');
+    const data = await apiGet(`/v1/quran/${surah}?translation=${translation}`);
+    el.innerHTML = data.ayahs.map((a) => `
+      <div class="card">
+        <span class="card-label">${escapeHtml(data.surah.name_english.toUpperCase())} — AYAH ${escapeHtml(a.ayah_number)}</span>
+        <div class="arabic">${escapeHtml(a.text_arabic)}</div>
+        <div class="body-text">${escapeHtml(a.translation || '(no translation available)')}</div>
+      </div>`).join('');
   } catch (err) {
-    resultsEl.innerHTML = `<div class="error">Couldn't load this surah: ${err.message}</div>`;
+    if (err.message.includes('Category not found or has no duas')) {
+      el.innerHTML = '<div class="status">No du&#39;as are available in this category yet.</div>';
+    } else {
+      showError(el, err);
+    }
   }
 });
 
+// --- Tafsir ---
+document.getElementById('tafsir-btn').addEventListener('click', async () => {
+  const surah = document.getElementById('tafsir-surah').value;
+  const ayah = document.getElementById('tafsir-ayah').value;
+  const el = document.getElementById('tafsir-results');
+  if (!surah || !ayah) { el.innerHTML = '<div class="error">Enter both a surah and ayah number.</div>'; return; }
+  el.innerHTML = '<div class="status">Loading…</div>';
+  try {
+    const data = await apiGet(`/v1/tafsir/${surah}/${ayah}`);
+    el.innerHTML = data.tafsir.map((t) => `
+      <div class="card">
+        <span class="card-label">${escapeHtml(t.source.toUpperCase())}</span>
+        <div class="body-text">${escapeHtml(t.text)}</div>
+      </div>`).join('');
+  } catch (err) { showError(el, err); }
+});
+
+// --- Hadith search ---
 document.getElementById('hadith-search-btn').addEventListener('click', async () => {
   const q = document.getElementById('hadith-query').value.trim();
-  const resultsEl = document.getElementById('hadith-results');
-  if (!q) { resultsEl.innerHTML = '<div class="error">Type something to search for.</div>'; return; }
-  resultsEl.innerHTML = '<div class="status">Searching…</div>';
-
+  const el = document.getElementById('hadith-results');
+  if (!q) { el.innerHTML = '<div class="error">Type something to search for.</div>'; return; }
+  el.innerHTML = '<div class="status">Searching…</div>';
   try {
     const data = await apiGet(`/v1/hadith/search?q=${encodeURIComponent(q)}`);
-    if (data.results.length === 0) {
-      resultsEl.innerHTML = '<div class="status">No results found.</div>';
-      return;
-    }
-    resultsEl.innerHTML = data.results.map((h) => `
-      <div class="hadith-card">
-        <div class="hadith-num">${h.collection.toUpperCase()} — #${h.hadith_number}${h.narrator ? ' — ' + h.narrator : ''}</div>
-        <div class="translation">${h.text_english}</div>
-      </div>
-    `).join('');
+    if (data.results.length === 0) { el.innerHTML = '<div class="status">No results found.</div>'; return; }
+    el.innerHTML = data.results.map((h) => `
+      <div class="card">
+        <span class="card-label">${escapeHtml(h.collection.toUpperCase())} — #${escapeHtml(h.hadith_number)}${h.narrator ? ' — ' + escapeHtml(h.narrator) : ''}</span>
+        <div class="body-text">${escapeHtml(h.text_english)}</div>
+      </div>`).join('');
+  } catch (err) { showError(el, err); }
+});
+
+// --- Isnad ---
+document.getElementById('isnad-btn').addEventListener('click', async () => {
+  const collection = document.getElementById('isnad-collection').value;
+  const number = document.getElementById('isnad-number').value.trim();
+  const el = document.getElementById('isnad-results');
+  if (!number) { el.innerHTML = '<div class="error">Enter a hadith number.</div>'; return; }
+  el.innerHTML = '<div class="status">Loading…</div>';
+  try {
+    const data = await apiGet(`/v1/hadith/${collection}/${number}/isnad`);
+    el.innerHTML = data.chain.map((n) => `
+      <div class="card">
+        <span class="card-label">POSITION ${escapeHtml(n.chain_position)} — ${escapeHtml(n.generation || '')}${n.reliability_grade ? ' — ' + escapeHtml(n.reliability_grade) : ''}</span>
+        <div class="body-text"><strong style="color:#F3ECDA;">${escapeHtml(n.name_english)}</strong>${n.kunya ? ' (' + escapeHtml(n.kunya) + ')' : ''}</div>
+        ${n.bio ? `<div class="note">${escapeHtml(n.bio)}</div>` : ''}
+      </div>`).join('');
+  } catch (err) { showError(el, err, ' — narrator chains are only available for a small starter set right now.'); }
+});
+
+// --- Duas ---
+async function loadDuaCategories() {
+  const select = document.getElementById('dua-category');
+  const button = document.getElementById('dua-btn');
+  try {
+    const data = await apiGet('/v1/duas/categories');
+    select.innerHTML = data.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</option>`).join('');
+    button.disabled = data.length === 0;
   } catch (err) {
-    resultsEl.innerHTML = `<div class="error">Search failed: ${err.message}</div>`;
+    button.disabled = true;
+    select.innerHTML = '<option value="">Unable to load categories</option>';
+    showError(document.getElementById('dua-results'), err);
   }
+}
+document.getElementById('dua-btn').addEventListener('click', async () => {
+  const category = document.getElementById('dua-category').value;
+  const el = document.getElementById('dua-results');
+  if (!category) { showError(el, new Error('No Du’a category is available right now.')); return; }
+  el.innerHTML = '<div class="status">Loading…</div>';
+  try {
+    const data = await apiGet(`/v1/duas/${category}`);
+    el.innerHTML = data.map((d) => `
+      <div class="card">
+        <span class="card-label">${escapeHtml(d.title.toUpperCase())}</span>
+        <div class="arabic">${escapeHtml(d.text_arabic)}</div>
+        ${d.transliteration ? `<div class="note">${escapeHtml(d.transliteration)}</div>` : ''}
+        <div class="body-text">${escapeHtml(d.translation)}</div>
+        ${d.reference ? `<div class="note">— ${escapeHtml(d.reference)}</div>` : ''}
+      </div>`).join('');
+  } catch (err) { showError(el, err); }
+});
+
+// --- Fiqh ---
+document.getElementById('fiqh-btn').addEventListener('click', async () => {
+  const topic = document.getElementById('fiqh-topic').value.trim();
+  const el = document.getElementById('fiqh-results');
+  if (!topic) { el.innerHTML = '<div class="error">Enter a topic to search.</div>'; return; }
+  el.innerHTML = '<div class="status">Searching…</div>';
+  try {
+    const data = await apiGet(`/v1/fiqh/search?topic=${encodeURIComponent(topic)}`);
+    if (data.rulings.length === 0) { el.innerHTML = '<div class="status">No rulings found for this topic yet — this is a starter dataset.</div>'; return; }
+    el.innerHTML = data.rulings.map((r) => `
+      <div class="card">
+        <span class="madhab-tag">${escapeHtml(r.madhab)}</span>
+        <div class="body-text"><strong style="color:#F3ECDA;">${escapeHtml(r.question)}</strong></div>
+        <div class="body-text" style="margin-top:8px;">${escapeHtml(r.ruling)}</div>
+        ${r.reference ? `<div class="note">— ${escapeHtml(r.reference)}</div>` : ''}
+      </div>`).join('');
+  } catch (err) { showError(el, err); }
 });
 
 populateSurahSelect();
+loadDuaCategories();
 </script>
 </body>
 </html>
