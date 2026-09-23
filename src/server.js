@@ -26,9 +26,10 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       ...require('helmet').contentSecurityPolicy.getDefaultDirectives(),
-      // Allow Google Fonts stylesheet
-      'style-src': ["'self'", 'https://fonts.googleapis.com'],
-      'font-src': ["'self'", 'https://fonts.gstatic.com'],
+      // Allow Google Fonts styles
+      'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      'font-src': ["'self'", 'https://fonts.gstatic.com', 'data:'],
+      'script-src': ["'self'", "'unsafe-inline'"],
     },
   },
 }));
@@ -50,10 +51,6 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'in
 
 // Public health check — no API key needed
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'ilm-api' }));
-
-// Public docs site (public/index.html) — the front door for researchers,
-// scholars, and students. Falls back to JSON if no public/ folder is deployed.
-app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // GET /v1/version — for researchers who need to cite a stable API version
 app.get('/v1/version', (req, res) => {

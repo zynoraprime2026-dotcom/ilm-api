@@ -4,6 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>Ilm API — Read</title>
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Amiri:ital,wght@0,400;0,700;1,400&family=Work+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
   * { box-sizing: border-box; }
@@ -17,6 +18,9 @@
   h1 { font-family: 'Amiri', serif; font-style: italic; font-size: 32px; margin: 10px 0 8px; }
   .lede { color: #A8967A; font-size: 14.5px; max-width: 600px; margin-bottom: 24px; }
   .nav-back { display: inline-block; margin-bottom: 18px; font-size: 13px; color: #A8967A; }
+  .nav-links { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 18px; font-size: 13px; }
+  .nav-links a { color: #A8967A; }
+  .nav-links a:hover { color: #C9A24B; }
   .tabs { display: flex; gap: 4px; margin-bottom: 20px; border-bottom: 1px solid rgba(201,162,75,0.15); }
   .tab {
     padding: 10px 16px; font-size: 14px; color: #A8967A; cursor: pointer;
@@ -57,11 +61,13 @@
 </head>
 <body>
 <div class="wrap">
-  <a class="nav-back" href="/">&larr; Back to documentation</a>
+  <div class="nav-links">
+    <a href="/">&larr; Back to documentation</a>
+    <a href="/prayer.html">Prayer times &amp; Qibla direction &rarr;</a>
+  </div>
   <div class="eyebrow">ILM API — READ</div>
   <h1>Read the Quran &amp; search Hadith</h1>
   <p class="lede">No account or technical knowledge needed — just pick a surah or search a topic.</p>
-  <a href="/prayer.html" style="display:inline-block;margin-bottom:20px;color:#C9A24B;font-size:14px;font-weight:500;">Prayer times &amp; Qibla direction &rarr;</a>
 
   <div class="tabs">
     <button class="tab active" data-tab="quran">Quran</button>
@@ -167,7 +173,7 @@ document.getElementById('quran-read-btn').addEventListener('click', async () => 
   resultsEl.innerHTML = '<div class="status">Loading…</div>';
 
   try {
-    const data = await apiGet(`/v1/quran/${surah}?translation=${translation}`);
+    const data = await apiGet(`/v1/quran/${surah}?translation=${encodeURIComponent(translation)}`);
     resultsEl.innerHTML = data.ayahs.map((a) => `
       <div class="ayah-card">
         <div class="ayah-num">${data.surah.name_english.toUpperCase()} — AYAH ${a.ayah_number}</div>
