@@ -114,6 +114,10 @@ app.use('/v1/bookmarks', bookmarksRoutes);
 // Developer API key signup is public by design — mounted before the gate
 app.use('/v1/developers', developersRoutes);
 
+// Prayer times are computed locally (no database) — free teaser endpoint,
+// mounted before the API key gate so developers can try it without a key.
+app.use('/v1/prayer-times', prayerTimesRoutes);
+
 // Everything else under /v1 requires a developer API key
 app.use('/v1', apiKeyAuth);
 app.use('/v1/quran', quranRoutes);
@@ -123,7 +127,6 @@ app.use('/v1/roots', rootsRoutes);
 app.use('/v1/topics', topicsRoutes);
 app.use('/v1/fiqh', fiqhRoutes);
 app.use('/v1/reciters', reciterRoutes);
-app.use('/v1/prayer-times', prayerTimesRoutes);
 app.use('/v1/duas', duasRoutes);
 
 // 404 handler
