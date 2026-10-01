@@ -2,25 +2,16 @@
 // morphology dataset (originally corpus.quran.com, forked/cleaned at
 // https://github.com/mustafa0x/quran-morphology, GNU licensed).
 //
-// IMPORTANT — VERIFY BEFORE FULL RUN:
-// This file is 6MB+ and GitHub blocks automated raw fetches of it, so its
-// exact column layout could not be verified directly while building this
-// script. The parser below assumes the well-documented Quranic Arabic Corpus
-// format: tab-separated columns of
-//   LOCATION  FORM  TAG  FEATURES
-// where LOCATION looks like "1:1:1:1" (surah:ayah:word:segment) and FEATURES
-// is a pipe-separated list of key:value pairs including ROOT: and LEM:.
-//
-// Before running this on the full file:
-//   1. Download quran-morphology.txt manually from:
-//      https://github.com/mustafa0x/quran-morphology/blob/master/quran-morphology.txt
-//      (use the "Download raw file" button — GitHub blocks scripted access)
-//   2. Place it in this project as data/quran-morphology.txt
-//   3. Run `head -50 data/quran-morphology.txt` and compare against the
-//      assumptions above — adjust the parsing logic below if the real
-//      columns differ.
+// FORMAT VERIFIED (2026-10-01) against data/quran-morphology.txt
+// (6,322,866 bytes, 130,030 lines, now committed in this repo).
+// Layout: tab-separated  LOCATION  FORM  TAG  FEATURES
+//   LOCATION  "surah:ayah:word:segment"  e.g. 1:1:1:2
+//   TAG       part-of-speech code (N, V, P, PN, ADJ, DEM, REL, ...)
+//   FEATURES  pipe-separated key:value pairs (ROOT:سمو|LEM:اسْم|M|GEN)
+// Case (NOM/ACC/GEN) appears as a bare token in FEATURES, not as POS:.
 //
 // Run: npm run seed:roots
+// (requires seed:quran to have run first — ayah ids must exist)
 
 require('dotenv').config();
 const fs = require('fs');
@@ -37,6 +28,12 @@ function parseFeatures(featureStr) {
     if (key && value) features[key.trim()] = value.trim();
   }
   return features;
+}
+
+function posLabel(tag, featureStr) {
+  // Corpus grammar case appears as a bare token (NOM/ACC/GEN) in FEATURES.
+  const caseMatch = featureStr.match(/\b(NOM|ACC|GEN)\b/);
+  return caseMatch ? `${tag} (${caseMatch[1]})` : tag;
 }
 
 async function getOrCreateRoot(rootArabic) {
@@ -60,6 +57,7 @@ async function seed() {
   }
 
   const rootIdCache = {};
+  const ayahIdCache = {}; // ~6,236 ayahs instead of ~100k lookups
   let lineCount = 0;
   let insertedWords = 0;
 
@@ -90,12 +88,16 @@ async function seed() {
     const root = features.ROOT;
     if (!root) continue;
 
-    const ayahResult = await db.query(
-      'SELECT id FROM ayahs WHERE surah_number = $1 AND ayah_number = $2',
-      [surahNumber, ayahNumber]
-    );
-    if (ayahResult.rows.length === 0) continue; // run seed:quran first
-    const ayahId = ayahResult.rows[0].id;
+    const ayahKey = `${surahNumber}:${ayahNumber}`;
+    let ayahId = ayahIdCache[ayahKey];
+    if (ayahId === undefined) {
+      const ayahResult = await db.query(
+        'SELECT id FROM ayahs WHERE surah_number = $1 AND ayah_number = $2',
+        [surahNumber, ayahNumber]
+      );
+      if (ayahResult.rows.length === 0) continue; // run seed:quran first
+      ayahId = ayahIdCache[ayahKey] = ayahResult.rows[0].id;
+    }
 
     if (!rootIdCache[root]) {
       rootIdCache[root] = await getOrCreateRoot(root);
@@ -105,7 +107,7 @@ async function seed() {
       `INSERT INTO ayah_words (ayah_id, word_position, text_arabic, root_id, part_of_speech)
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT (ayah_id, word_position) DO UPDATE SET root_id = EXCLUDED.root_id`,
-      [ayahId, wordPosition, form, rootIdCache[root], features.POS || null]
+      [ayahId, wordPosition, form, rootIdCache[root], posLabel(tag, featureStr || '')]
     );
     insertedWords++;
 
