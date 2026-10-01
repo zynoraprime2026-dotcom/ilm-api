@@ -47,12 +47,15 @@ router.get('/export', requireTier('academic', 'pro'), async (req, res) => {
 router.get('/:surah', async (req, res) => {
   const surahNum = parseInt(req.params.surah, 10);
   const translationCode = req.query.translation || 'en.sahih';
+  // Optional pagination for long surahs: /:surah?page=2&limit=20 browses ayahs
+  const page = req.query.page ? Math.max(parseInt(req.query.page, 10), 1) : null;
+  const limit = req.query.limit ? Math.min(parseInt(req.query.limit, 10) || 20, 100) : null;
 
   if (isNaN(surahNum) || surahNum < 1 || surahNum > 114) {
     return res.status(400).json({ error: 'Surah number must be between 1 and 114' });
   }
 
-  const cacheKey = `quran:surah:${surahNum}:${translationCode}`;
+  const cacheKey = `quran:surah:${surahNum}:${translationCode}:${page || 'all'}:${limit || 'all'}`;
   const cached = await getCached(cacheKey);
   if (cached) return res.json(cached);
 
@@ -61,20 +64,48 @@ router.get('/:surah', async (req, res) => {
     return res.status(404).json({ error: 'Surah not found' });
   }
 
-  const ayahsResult = await db.query(
-    `SELECT a.ayah_number, a.text_arabic, at.text AS translation
-     FROM ayahs a
-     JOIN translations t ON t.code = $2
-     LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
-     WHERE a.surah_number = $1
-     ORDER BY a.ayah_number`,
-    [surahNum, translationCode]
-  );
+  const surah = surahResult.rows[0];
+  let ayahs, pagination = null;
+
+  if (page && limit) {
+    const offset = (page - 1) * limit;
+    const total = surah.ayah_count;
+    const lastPage = Math.max(Math.ceil(total / limit), 1);
+    const ayahsResult = await db.query(
+      `SELECT a.ayah_number, a.text_arabic, at.text AS translation
+       FROM ayahs a
+       JOIN translations t ON t.code = $2
+       LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
+       WHERE a.surah_number = $1
+       ORDER BY a.ayah_number
+       LIMIT $3 OFFSET $4`,
+      [surahNum, translationCode, limit, offset]
+    );
+    ayahs = ayahsResult.rows;
+    pagination = {
+      page, limit, total, total_pages: lastPage,
+      has_next: page < lastPage, has_prev: page > 1,
+      next_page: page < lastPage ? page + 1 : null,
+      prev_page: page > 1 ? page - 1 : null,
+    };
+  } else {
+    const ayahsResult = await db.query(
+      `SELECT a.ayah_number, a.text_arabic, at.text AS translation
+       FROM ayahs a
+       JOIN translations t ON t.code = $2
+       LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
+       WHERE a.surah_number = $1
+       ORDER BY a.ayah_number`,
+      [surahNum, translationCode]
+    );
+    ayahs = ayahsResult.rows;
+  }
 
   const payload = {
-    surah: surahResult.rows[0],
+    surah,
     translation_code: translationCode,
-    ayahs: ayahsResult.rows,
+    pagination,
+    ayahs,
   };
 
   await setCached(cacheKey, payload);

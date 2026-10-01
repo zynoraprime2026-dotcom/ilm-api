@@ -18,7 +18,8 @@ router.get('/search', async (req, res) => {
 
   const params = [q];
   let sql = `
-    SELECT h.id, h.hadith_number, h.narrator, h.text_english, h.grade, c.slug AS collection
+    SELECT h.id, h.hadith_number, h.arabic_number, h.narrator, h.text_english, h.grade,
+           h.book_number, h.book_name, c.slug AS collection
     FROM hadiths h
     JOIN hadith_collections c ON c.id = h.collection_id
     WHERE to_tsvector('english', h.text_english) @@ plainto_tsquery('english', $1)`;
@@ -32,6 +33,54 @@ router.get('/search', async (req, res) => {
 
   const { rows } = await db.query(sql, params);
   res.json({ query: q, count: rows.length, results: rows });
+});
+
+// GET /v1/hadith/:collection?page=1&limit=20&book=8
+// Browse a collection page by page — bilingual (Arabic + English) with
+// pagination metadata so clients can build next/prev navigation.
+router.get('/:collection', async (req, res) => {
+  const { collection } = req.params;
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+  const book = req.query.book ? parseInt(req.query.book, 10) : null;
+  const offset = (page - 1) * limit;
+
+  const collRows = await db.query('SELECT id, name, slug FROM hadith_collections WHERE slug = $1', [collection]);
+  if (collRows.length === 0) return res.status(404).json({ error: 'Collection not found' });
+  const coll = collRows.rows[0];
+
+  const params = [coll.id];
+  let where = 'h.collection_id = $1';
+  if (book != null && !isNaN(book)) {
+    params.push(book);
+    where += ` AND h.book_number = $${params.length}`;
+  }
+
+  const totalRows = await db.query(`SELECT COUNT(*) FROM hadiths h WHERE ${where}`, params);
+  const total = parseInt(totalRows.rows[0].count, 10);
+
+  params.push(limit);
+  params.push(offset);
+  const { rows } = await db.query(
+    `SELECT h.hadith_number, h.arabic_number, h.book_number, h.book_name, h.grade, h.narrator,
+            h.text_arabic, h.text_english
+     FROM hadiths h
+     WHERE ${where}
+     ORDER BY h.id
+     LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
+  );
+
+  const lastPage = Math.max(Math.ceil(total / limit), 1);
+  res.json({
+    collection: coll,
+    page, limit, total, total_pages: lastPage,
+    has_next: page < lastPage,
+    has_prev: page > 1,
+    next_page: page < lastPage ? page + 1 : null,
+    prev_page: page > 1 ? page - 1 : null,
+    hadiths: rows,
+  });
 });
 
 // GET /v1/hadith/:collection/:number
@@ -57,6 +106,54 @@ router.get('/:collection/:number', async (req, res) => {
   res.json(rows[0]);
 });
 
+// GET /v1/hadith/:collection?page=1&limit=20&book=8
+// Browse a collection page by page — bilingual (Arabic + English) with
+// pagination metadata so clients can build next/prev navigation.
+router.get('/:collection', async (req, res) => {
+  const { collection } = req.params;
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+  const book = req.query.book ? parseInt(req.query.book, 10) : null;
+  const offset = (page - 1) * limit;
+
+  const collRows = await db.query('SELECT id, name, slug FROM hadith_collections WHERE slug = $1', [collection]);
+  if (collRows.length === 0) return res.status(404).json({ error: 'Collection not found' });
+  const coll = collRows.rows[0];
+
+  const params = [coll.id];
+  let where = 'h.collection_id = $1';
+  if (book != null && !isNaN(book)) {
+    params.push(book);
+    where += ` AND h.book_number = $${params.length}`;
+  }
+
+  const totalRows = await db.query(`SELECT COUNT(*) FROM hadiths h WHERE ${where}`, params);
+  const total = parseInt(totalRows.rows[0].count, 10);
+
+  params.push(limit);
+  params.push(offset);
+  const { rows } = await db.query(
+    `SELECT h.hadith_number, h.arabic_number, h.book_number, h.book_name, h.grade, h.narrator,
+            h.text_arabic, h.text_english
+     FROM hadiths h
+     WHERE ${where}
+     ORDER BY h.id
+     LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
+  );
+
+  const lastPage = Math.max(Math.ceil(total / limit), 1);
+  res.json({
+    collection: coll,
+    page, limit, total, total_pages: lastPage,
+    has_next: page < lastPage,
+    has_prev: page > 1,
+    next_page: page < lastPage ? page + 1 : null,
+    prev_page: page > 1 ? page - 1 : null,
+    hadiths: rows,
+  });
+});
+
 // GET /v1/hadith/:collection/:number/isnad — chain of narrators for a hadith
 router.get('/:collection/:number/isnad', async (req, res) => {
   const { collection, number } = req.params;
@@ -78,6 +175,54 @@ router.get('/:collection/:number/isnad', async (req, res) => {
   }
 
   res.json({ collection, hadith_number: number, chain: rows });
+});
+
+// GET /v1/hadith/:collection?page=1&limit=20&book=8
+// Browse a collection page by page — bilingual (Arabic + English) with
+// pagination metadata so clients can build next/prev navigation.
+router.get('/:collection', async (req, res) => {
+  const { collection } = req.params;
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const limit = Math.min(parseInt(req.query.limit, 10) || 20, 100);
+  const book = req.query.book ? parseInt(req.query.book, 10) : null;
+  const offset = (page - 1) * limit;
+
+  const collRows = await db.query('SELECT id, name, slug FROM hadith_collections WHERE slug = $1', [collection]);
+  if (collRows.length === 0) return res.status(404).json({ error: 'Collection not found' });
+  const coll = collRows.rows[0];
+
+  const params = [coll.id];
+  let where = 'h.collection_id = $1';
+  if (book != null && !isNaN(book)) {
+    params.push(book);
+    where += ` AND h.book_number = $${params.length}`;
+  }
+
+  const totalRows = await db.query(`SELECT COUNT(*) FROM hadiths h WHERE ${where}`, params);
+  const total = parseInt(totalRows.rows[0].count, 10);
+
+  params.push(limit);
+  params.push(offset);
+  const { rows } = await db.query(
+    `SELECT h.hadith_number, h.arabic_number, h.book_number, h.book_name, h.grade, h.narrator,
+            h.text_arabic, h.text_english
+     FROM hadiths h
+     WHERE ${where}
+     ORDER BY h.id
+     LIMIT $${params.length - 1} OFFSET $${params.length}`,
+    params
+  );
+
+  const lastPage = Math.max(Math.ceil(total / limit), 1);
+  res.json({
+    collection: coll,
+    page, limit, total, total_pages: lastPage,
+    has_next: page < lastPage,
+    has_prev: page > 1,
+    next_page: page < lastPage ? page + 1 : null,
+    prev_page: page > 1 ? page - 1 : null,
+    hadiths: rows,
+  });
 });
 
 // GET /v1/hadith/:collection/:number/cite?format=bibtex|apa

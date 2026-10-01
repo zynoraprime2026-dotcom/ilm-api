@@ -11,6 +11,7 @@ const quranRoutes = require('./routes/quran');
 const hadithRoutes = require('./routes/hadith');
 const prayerTimesRoutes = require('./routes/prayerTimes');
 const duasRoutes = require('./routes/duas');
+const narratorsRoutes = require('./routes/narrators');
 const tafsirRoutes = require('./routes/tafsir');
 const rootsRoutes = require('./routes/roots');
 const topicsRoutes = require('./routes/topics');
@@ -129,6 +130,7 @@ app.use('/v1/topics', topicsRoutes);
 app.use('/v1/fiqh', fiqhRoutes);
 app.use('/v1/reciters', reciterRoutes);
 app.use('/v1/duas', duasRoutes);
+app.use('/v1/narrators', narratorsRoutes);
 
 // 404 handler
 app.use((req, res) => res.status(404).json({ error: 'Endpoint not found' }));
