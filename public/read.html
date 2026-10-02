@@ -34,6 +34,13 @@
   .status { color: #6B8F82; font-size: 13px; font-style: italic; padding: 12px 0; }
   .error { color: #C1533D; font-size: 13px; padding: 12px 0; }
   .madhab-tag { display: inline-block; background: rgba(201,162,75,0.15); color: #C9A24B; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-bottom: 8px; }
+  .small-btn { background: none; border: 1px solid rgba(201,162,75,0.4); color: #C9A24B; padding: 4px 10px; font-size: 12px; border-radius: 5px; margin-top: 6px; cursor: pointer; }
+  .small-btn:hover { background: rgba(201,162,75,0.1); }
+  .words-grid { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; direction: rtl; }
+  .word-chip { background: rgba(243,236,218,0.04); border: 1px solid rgba(201,162,75,0.15); border-radius: 6px; padding: 8px 10px; text-align: center; min-width: 70px; }
+  .word-chip .wa { font-family: 'Amiri', serif; font-size: 20px; display: block; margin-bottom: 4px; }
+  .word-chip .wp { color: #6B8F82; font-size: 10px; font-family: 'JetBrains Mono', monospace; display: block; direction: ltr; }
+  .word-chip .wr { color: #A8967A; font-size: 10px; display: block; direction: ltr; }
 </style>
 </head>
 <body>
@@ -42,7 +49,7 @@
   <div class="nav-links"><a href="/prayer.html">Prayer times &amp; Qibla direction →</a></div>
   <div class="eyebrow">ILM API — READ</div>
   <h1>Read &amp; search Islamic knowledge</h1>
-  <p class="lede">No account or technical knowledge needed. Note: hadith text is currently English-only (Arabic not yet seeded).</p>
+  <p class="lede">No account or technical knowledge needed. Bilingual Arabic + English hadith, word-by-word Quran grammar, and root-word search are all live.</p>
 
   <div class="tabs">
     <button class="tab active" data-tab="quran">Quran</button>
@@ -51,6 +58,7 @@
     <button class="tab" data-tab="isnad">Isnad</button>
     <button class="tab" data-tab="duas">Du'as</button>
     <button class="tab" data-tab="fiqh">Fiqh</button>
+    <button class="tab" data-tab="roots">Roots</button>
   </div>
 
   <div class="panel active" id="panel-quran">
@@ -86,6 +94,18 @@
       <div class="row">
         <input id="hadith-query" type="text" placeholder="Search hadith — e.g. patience, charity, intention" />
         <button id="hadith-search-btn">Search</button>
+      </div>
+      <div class="row">
+        <select id="hadith-lookup-collection">
+          <option value="bukhari">Sahih al-Bukhari</option>
+          <option value="muslim">Sahih Muslim</option>
+          <option value="abudawud">Sunan Abu Dawud</option>
+          <option value="tirmidhi">Jami at-Tirmidhi</option>
+          <option value="nasai">Sunan an-Nasa'i</option>
+          <option value="ibnmajah">Sunan Ibn Majah</option>
+        </select>
+        <input id="hadith-lookup-number" type="text" placeholder="Hadith # (e.g. 1)" />
+        <button id="hadith-lookup-btn">Look Up</button>
       </div>
     </div>
     <div id="hadith-results"></div>
@@ -127,6 +147,16 @@
       </div>
     </div>
     <div id="fiqh-results"></div>
+  </div>
+
+  <div class="panel" id="panel-roots">
+    <div class="controls">
+      <div class="row">
+        <input id="root-input" type="text" placeholder="Arabic root — e.g. رحم" style="direction: rtl; text-align: right; font-family: 'Amiri', serif; font-size: 18px;" />
+        <button id="root-btn">Find Occurrences</button>
+      </div>
+    </div>
+    <div id="root-results"></div>
   </div>
 </div>
 
@@ -217,11 +247,36 @@ document.getElementById('quran-read-btn').addEventListener('click', async () => 
   try {
     const data = await apiGet(`/v1/quran/${surah}?translation=${translation}`);
     el.innerHTML = data.ayahs.map((a) => `
-      <div class="card">
+      <div class="card" data-surah="${escapeHtml(surah)}" data-ayah="${escapeHtml(a.ayah_number)}">
         <span class="card-label">${escapeHtml(data.surah.name_english.toUpperCase())} — AYAH ${escapeHtml(a.ayah_number)}</span>
         <div class="arabic">${escapeHtml(a.text_arabic)}</div>
         <div class="body-text">${escapeHtml(a.translation || '(no translation available)')}</div>
+        <button class="small-btn words-toggle">Word-by-word grammar ▾</button>
+        <div class="words-grid" style="display:none;"></div>
       </div>`).join('');
+    el.querySelectorAll('.words-toggle').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const card = btn.closest('.card');
+        const grid = card.querySelector('.words-grid');
+        if (grid.style.display !== 'none' && grid.innerHTML) {
+          grid.style.display = grid.style.display === 'none' ? 'flex' : 'none';
+          return;
+        }
+        grid.style.display = 'flex';
+        grid.innerHTML = '<div class="status">Loading…</div>';
+        try {
+          const wdata = await apiGet(`/v1/quran/${card.dataset.surah}/${card.dataset.ayah}/words`);
+          grid.innerHTML = wdata.words.map((w) => `
+            <div class="word-chip">
+              <span class="wa">${escapeHtml(w.text_arabic)}</span>
+              <span class="wp">${escapeHtml(w.part_of_speech || '')}</span>
+              <span class="wr">${w.root_arabic ? 'root: ' + escapeHtml(w.root_arabic) : ''}</span>
+            </div>`).join('');
+        } catch (err) {
+          grid.innerHTML = `<div class="error">${escapeHtml(err.message)}</div>`;
+        }
+      });
+    });
   } catch (err) {
     if (err.message.includes('Category not found or has no duas')) {
       el.innerHTML = '<div class="status">No du&#39;as are available in this category yet.</div>';
@@ -260,8 +315,28 @@ document.getElementById('hadith-search-btn').addEventListener('click', async () 
     el.innerHTML = data.results.map((h) => `
       <div class="card">
         <span class="card-label">${escapeHtml(h.collection.toUpperCase())} — #${escapeHtml(h.hadith_number)}${h.narrator ? ' — ' + escapeHtml(h.narrator) : ''}</span>
+        ${h.text_arabic ? `<div class="arabic">${escapeHtml(h.text_arabic)}</div>` : ''}
         <div class="body-text">${escapeHtml(h.text_english)}</div>
       </div>`).join('');
+  } catch (err) { showError(el, err); }
+});
+
+// --- Hadith direct lookup (bilingual) ---
+document.getElementById('hadith-lookup-btn').addEventListener('click', async () => {
+  const collection = document.getElementById('hadith-lookup-collection').value;
+  const number = document.getElementById('hadith-lookup-number').value.trim();
+  const el = document.getElementById('hadith-results');
+  if (!number) { el.innerHTML = '<div class="error">Enter a hadith number.</div>'; return; }
+  el.innerHTML = '<div class="status">Loading…</div>';
+  try {
+    const h = await apiGet(`/v1/hadith/${collection}/${number}`);
+    el.innerHTML = `
+      <div class="card">
+        <span class="card-label">${escapeHtml(collection.toUpperCase())} — #${escapeHtml(h.hadith_number)}${h.narrator ? ' — ' + escapeHtml(h.narrator) : ''}${h.grade ? ' — ' + escapeHtml(h.grade) : ''}</span>
+        ${h.text_arabic ? `<div class="arabic">${escapeHtml(h.text_arabic)}</div>` : ''}
+        <div class="body-text">${escapeHtml(h.text_english)}</div>
+        ${h.book_name || h.chapter_name ? `<div class="note">${escapeHtml(h.book_name || '')}${h.chapter_name ? ' — ' + escapeHtml(h.chapter_name) : ''}</div>` : ''}
+      </div>`;
   } catch (err) { showError(el, err); }
 });
 
@@ -330,6 +405,24 @@ document.getElementById('fiqh-btn').addEventListener('click', async () => {
         <div class="body-text"><strong style="color:#F3ECDA;">${escapeHtml(r.question)}</strong></div>
         <div class="body-text" style="margin-top:8px;">${escapeHtml(r.ruling)}</div>
         ${r.reference ? `<div class="note">— ${escapeHtml(r.reference)}</div>` : ''}
+      </div>`).join('');
+  } catch (err) { showError(el, err); }
+});
+
+// --- Roots ---
+document.getElementById('root-btn').addEventListener('click', async () => {
+  const root = document.getElementById('root-input').value.trim();
+  const el = document.getElementById('root-results');
+  if (!root) { el.innerHTML = '<div class="error">Enter an Arabic root, e.g. رحم</div>'; return; }
+  el.innerHTML = '<div class="status">Searching…</div>';
+  try {
+    const data = await apiGet(`/v1/roots/${encodeURIComponent(root)}/occurrences`);
+    if (!data.occurrences || data.occurrences.length === 0) { el.innerHTML = '<div class="status">No occurrences found for this root.</div>'; return; }
+    el.innerHTML = `<div class="note">${escapeHtml(data.count)} occurrence(s) found</div>` + data.occurrences.map((o) => `
+      <div class="card">
+        <span class="card-label">SURAH ${escapeHtml(o.surah_number)} — AYAH ${escapeHtml(o.ayah_number)}</span>
+        <div class="arabic">${escapeHtml(o.word)}</div>
+        <div class="note">${escapeHtml(o.part_of_speech || '')}</div>
       </div>`).join('');
   } catch (err) { showError(el, err); }
 });
