@@ -34,21 +34,27 @@ router.get('/search', async (req, res) => {
     conditions.push(`chapter ILIKE $${params.length}`);
   }
 
-  const { rows } = await db.query(
-    `SELECT id, chapter, topic, madhab, question, ruling, reference, evidence
-     FROM fiqh_rulings
-     WHERE ${conditions.join(' AND ')}
-     ORDER BY chapter, topic,
-              CASE madhab
-                WHEN 'Consensus (all four madhabs)' THEN 0
-                WHEN 'Hanafi' THEN 1
-                WHEN 'Maliki' THEN 2
-                WHEN 'Shafi\'i' THEN 3
-                WHEN 'Hanbali' THEN 4
-                ELSE 5
-              END`,
-    params
-  );
+  let rows;
+  try {
+    rows = (await db.query(
+      `SELECT id, chapter, topic, madhab, question, ruling, reference, evidence
+       FROM fiqh_rulings
+       WHERE ${conditions.join(' AND ')}
+       ORDER BY chapter, topic,
+                CASE madhab
+                  WHEN 'Consensus (all four madhabs)' THEN 0
+                  WHEN 'Hanafi' THEN 1
+                  WHEN 'Maliki' THEN 2
+                  WHEN 'Shafi''i' THEN 3
+                  WHEN 'Hanbali' THEN 4
+                  ELSE 5
+                END`,
+      params
+    )).rows;
+  } catch (err) {
+    console.error('fiqh search error:', err);
+    return res.status(500).json({ error: 'Database error during fiqh search' });
+  }
 
   res.json({
     count: rows.length,
