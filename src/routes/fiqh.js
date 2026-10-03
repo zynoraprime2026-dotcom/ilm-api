@@ -57,6 +57,14 @@ router.get('/search', async (req, res) => {
   });
 });
 
+// GET /v1/fiqh/books — the classical manuals and collections cited by the dataset,
+// with metadata and research access links. For study and verification purposes.
+router.get('/books', async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  const { rows } = await db.query('SELECT * FROM fiqh_books ORDER BY id');
+  res.json({ count: rows.length, books: rows });
+});
+
 // GET /v1/fiqh/topics — all topics with their chapters
 router.get('/topics', async (req, res) => {
   res.set('Cache-Control', 'public, max-age=86400');

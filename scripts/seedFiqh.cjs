@@ -18,7 +18,10 @@ const DEFAULT_REF = {
   "Hanbali": "Al-Mughni (Ibn Qudamah)",
 };
 
+const BOOKS = require('../data/fiqh-books.js');
+
 (async () => {
+  // rulings table
   await sql.query('ALTER TABLE fiqh_rulings ADD COLUMN IF NOT EXISTS chapter TEXT');
   await sql.query('ALTER TABLE fiqh_rulings ADD COLUMN IF NOT EXISTS evidence TEXT');
 
@@ -64,5 +67,18 @@ const DEFAULT_REF = {
      FROM fiqh_rulings`
   );
   console.log('VERIFY:', JSON.stringify(check[0]));
+  // books registry (research layer)
+  await sql.query(
+    'CREATE TABLE IF NOT EXISTS fiqh_books (id SERIAL PRIMARY KEY, title TEXT NOT NULL, author TEXT NOT NULL, death_year_ah INTEGER, school TEXT, description TEXT, access_url TEXT)'
+  );
+  await sql.query('DELETE FROM fiqh_books');
+  for (const b of BOOKS) {
+    await sql.query(
+      'INSERT INTO fiqh_books (title, author, death_year_ah, school, description, access_url) VALUES ($1, $2, $3, $4, $5, $6)',
+      [b.title, b.author, b.death_year_ah, b.school, b.description, b.access_url]
+    );
+  }
+  const books = await sql.query('SELECT count(*) AS c FROM fiqh_books');
+  console.log('books seeded:', books[0].c);
   console.log('FIQH SEED COMPLETE');
 })().catch((e) => { console.error('FAILED:', e.message); process.exit(1); });

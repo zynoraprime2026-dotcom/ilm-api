@@ -1,0 +1,130 @@
+// Classical books referenced by the fiqh dataset — metadata for research purposes.
+// access_url points to open research libraries (archive.org search is stable and
+// always returns results; shamela.ws is the standard Arabic digital library).
+module.exports = [
+  // ---- Hanafi manuals ----
+  {
+    title: 'Al-Hidayah (الهداية)',
+    author: 'Burhan al-Din al-Marghinani',
+    death_year_ah: 593,
+    school: 'Hanafi',
+    description: 'The standard Hanafi manual of fiqh, presented as a comparative digest of the school with its evidence. The most-studied Hanafi text worldwide; famously carried to the grave of its author by kings. Basis of the major commentaries Fath al-Qadir and al-'Inayah.',
+    access_url: 'https://archive.org/search?query=al-Hidayah+al-Marghinani',
+  },
+  {
+    title: 'Nur al-Idah (نور الإيضاح)',
+    author: 'Hasan al-Shurunbulali',
+    death_year_ah: 1069,
+    school: 'Hanafi',
+    description: 'The concise Hanafi manual of worship (purification, prayer, fasting, zakah, Hajj), paired with its own commentary Maraqi al-Falah. The entry-level text of the Hanafi curriculum across West Africa and South Asia.',
+    access_url: 'https://archive.org/search?query=Nur+al-Idah+Shurunbulali',
+  },
+  {
+    title: 'Radd al-Muhtar (رد المحتار)',
+    author: 'Muhammad Amin Ibn Abidin',
+    death_year_ah: 1252,
+    school: 'Hanafi',
+    description: 'The authoritative late gloss on al-Haskafi\'s al-Durr al-Mukhtar, and the final reference of the later Hanafi school. Ibn Abidin was the Hanafi mufti of Damascus.',
+    access_url: 'https://archive.org/search?query=Radd+al-Muhtar+Ibn+Abidin',
+  },
+  // ---- Shafi'i manuals ----
+  {
+    title: 'Minhaj al-Talibin (منهاج الطالبين)',
+    author: 'Yahya ibn Sharaf al-Nawawi',
+    death_year_ah: 676,
+    school: 'Shafi\'i',
+    description: 'The core Shafi\'i matn (base text) by Imam al-Nawawi, and the foundation of the school\'s later scholarship: Tuhfat al-Muhtaj, Nihayat al-Muhtaj, and Mughni al-Muhtaj are all commentaries on it.',
+    access_url: 'https://archive.org/search?query=Minhaj+al-Talibin+Nawawi',
+  },
+  {
+    title: 'Al-Majmu\' Sharh al-Muhadhdhab (المجموع شرح المهذب)',
+    author: 'Yahya ibn Sharaf al-Nawawi',
+    death_year_ah: 676,
+    school: 'Shafi\'i',
+    description: 'Al-Nawawi\'s encyclopedic commentary on al-Shirazi\'s al-Muhadhdhab — a comparative masterpiece surveying the schools with their evidence and hadith verification.',
+    access_url: 'https://archive.org/search?query=al-Majmu+sharh+al-muhadhdhab',
+  },
+  // ---- Maliki manuals ----
+  {
+    title: 'Mukhtasar Khalil (مختصر خليل)',
+    author: 'Khalil ibn Ishaq al-Jundi',
+    death_year_ah: 776,
+    school: 'Maliki',
+    description: 'The standard Maliki matn — famously dense, covering the whole school in a few pages, with the entire later Maliki curriculum (al-Dardir, al-Kharashi, al-Dasuqi) built on its commentaries.',
+    access_url: 'https://archive.org/search?query=Mukhtasar+Khalil+Maliki',
+  },
+  {
+    title: 'Al-Mudawwana al-Kubra (المدونة الكبرى)',
+    author: 'Abd al-Salam Sahnun',
+    death_year_ah: 240,
+    school: 'Maliki',
+    description: 'The foundational Maliki compendium: Sahnun\'s record of the school of Madinah as transmitted from Imam Malik through Ibn al-Qasim. One of the earliest and most weighty books of fiqh in Islam.',
+    access_url: 'https://archive.org/search?query=al-Mudawwana+al-Kubra+Sahnun',
+  },
+  // ---- Hanbali manuals ----
+  {
+    title: 'Al-Mughni (المغني)',
+    author: 'Muwaffaq al-Din Ibn Qudamah',
+    death_year_ah: 620,
+    school: 'Hanbali',
+    description: 'The great Hanbali encyclopedia of comparative fiqh — presenting the Hanbali position with the evidence and the positions of the other schools. One of the most important books of Islamic law ever written.',
+    access_url: 'https://archive.org/search?query=al-Mughni+Ibn+Qudamah',
+  },
+  // ---- Hadith evidence sources ----
+  {
+    title: 'Sahih al-Bukhari (صحيح البخاري)',
+    author: 'Muhammad ibn Isma\'il al-Bukhari',
+    death_year_ah: 256,
+    school: 'Hadith collection',
+    description: 'The most rigorously authenticated hadith collection, titled al-Jami\' al-Sahih al-Musnad. Known throughout the ummah as the most truthful book after the Book of Allah.',
+    access_url: 'https://archive.org/search?query=Sahih+al-Bukhari',
+  },
+  {
+    title: 'Sahih Muslim (صحيح مسلم)',
+    author: 'Muslim ibn al-Hajjaj al-Naysaburi',
+    death_year_ah: 261,
+    school: 'Hadith collection',
+    description: 'The second of the two Sahihs, arranged with unmatched precision of method in hadith ordering.',
+    access_url: 'https://archive.org/search?query=Sahih+Muslim',
+  },
+  {
+    title: 'Sunan Abu Dawud (سنن أبي داود)',
+    author: 'Sulayman ibn al-Ash\'ath Abu Dawud',
+    death_year_ah: 275,
+    school: 'Hadith collection',
+    description: 'One of the six canonical collections, focused on legal hadith; the author famously presented it to Imam Ahmad for review.',
+    access_url: 'https://archive.org/search?query=Sunan+Abu+Dawud',
+  },
+  {
+    title: 'Jami\' al-Tirmidhi (جامع الترمذي)',
+    author: 'Muhammad ibn Isa al-Tirmidhi',
+    death_year_ah: 279,
+    school: 'Hadith collection',
+    description: 'Canonical collection distinguished by its grading of hadith and its recording of the schools\' differing positions on each legal issue.',
+    access_url: 'https://archive.org/search?query=Jami+al-Tirmidhi',
+  },
+  {
+    title: 'Sunan al-Nasa\'i (سنن النسائي)',
+    author: 'Ahmad ibn Shu\'ayb al-Nasa\'i',
+    death_year_ah: 303,
+    school: 'Hadith collection',
+    description: 'Canonical collection, with its abridgement al-Mujtaba counted among the highest collections after the two Sahihs.',
+    access_url: 'https://archive.org/search?query=Sunan+al-Nasai',
+  },
+  {
+    title: 'Sunan Ibn Majah (سنن ابن ماجه)',
+    author: 'Muhammad ibn Yazid Ibn Majah',
+    death_year_ah: 273,
+    school: 'Hadith collection',
+    description: 'The sixth of the canonical six collections of hadith.',
+    access_url: 'https://archive.org/search?query=Sunan+Ibn+Majah',
+  },
+  {
+    title: 'Al-Muwatta (الموطأ)',
+    author: 'Imam Malik ibn Anas',
+    death_year_ah: 179,
+    school: 'Hadith collection',
+    description: 'The earliest surviving book of hadith and law — the practice of the people of Madinah as compiled by Imam Malik, praised by Imam al-Shafi\'i as the most truthful book after the Book of Allah (with al-Bukhari).',
+    access_url: 'https://archive.org/search?query=Muwatta+Malik',
+  },
+];
