@@ -4,7 +4,7 @@ const db = require('../config/db');
 
 // GET /v1/fiqh/chapters — list chapters with topic and ruling counts
 router.get('/chapters', async (req, res) => {
-  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('Cache-Control', 'private, max-age=86400');
   const { rows } = await db.query(
     `SELECT chapter, count(DISTINCT topic) AS topics, count(*) AS rulings
      FROM fiqh_rulings GROUP BY chapter ORDER BY min(id)`
@@ -68,7 +68,7 @@ router.get('/search', async (req, res) => {
 // Includes per-madhab study paths (beginner -> advanced) and the evidence-first
 // tradition for those not following a madhab.
 router.get('/books', async (req, res) => {
-  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('Cache-Control', 'private, max-age=86400');
   const { madhab, level } = req.query;
   let q = 'SELECT * FROM fiqh_books';
   const where = [];
@@ -84,14 +84,14 @@ router.get('/books', async (req, res) => {
 // GET /v1/fiqh/scholars — scholars of the evidence-first (no exclusive madhab)
 // tradition, for research purposes. Presented alongside, not above, the four schools.
 router.get('/scholars', async (req, res) => {
-  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('Cache-Control', 'private, max-age=86400');
   const { rows } = await db.query('SELECT * FROM fiqh_scholars ORDER BY death_year_ah');
   res.json({ count: rows.length, scholars: rows });
 });
 
 // GET /v1/fiqh/topics — all topics with their chapters
 router.get('/topics', async (req, res) => {
-  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('Cache-Control', 'private, max-age=86400');
   const { rows } = await db.query(
     `SELECT DISTINCT chapter, topic, question FROM fiqh_rulings ORDER BY chapter, topic`
   );

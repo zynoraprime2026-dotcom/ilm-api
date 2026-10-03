@@ -6,7 +6,7 @@ const requireTier = require('../middleware/requireTier');
 
 // GET /v1/quran/translations — list all available translations
 router.get('/translations', async (req, res) => {
-  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('Cache-Control', 'private, max-age=86400');
   const { rows } = await db.query('SELECT code, language, translator_name, is_simplified FROM translations ORDER BY is_simplified DESC, language, translator_name');
   res.json(rows);
 });
@@ -15,7 +15,7 @@ router.get('/translations', async (req, res) => {
 router.get('/surahs', async (req, res) => {
   const cacheKey = 'quran:surahs:all';
   const cached = await getCached(cacheKey);
-  res.set('Cache-Control', 'public, max-age=86400'); // this list never changes
+  res.set('Cache-Control', 'private, max-age=86400'); // this list never changes (private: edge cache must not bypass the API key gate)
   if (cached) return res.json(cached);
 
   const { rows } = await db.query('SELECT * FROM surahs ORDER BY number');

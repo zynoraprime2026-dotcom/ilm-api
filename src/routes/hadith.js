@@ -6,7 +6,7 @@ const requireTier = require('../middleware/requireTier');
 
 // GET /v1/hadith/collections — list available collections (Bukhari, Muslim, etc.)
 router.get('/collections', async (req, res) => {
-  res.set('Cache-Control', 'public, max-age=86400');
+  res.set('Cache-Control', 'private, max-age=86400');
   const { rows } = await db.query('SELECT * FROM hadith_collections ORDER BY name');
   res.json(rows);
 });

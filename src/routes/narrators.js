@@ -5,7 +5,7 @@ const { getCached, setCached } = require('../config/cache');
 
 // GET /v1/narrators — list all narrators with their isnad counts
 router.get('/', async (req, res) => {
-  res.set('Cache-Control', 'public, max-age=3600');
+  res.set('Cache-Control', 'private, max-age=3600');
   const { rows } = await db.query(
     `SELECT n.id, n.name_english, n.name_arabic, n.kunya, n.generation,
             n.birth_year_hijri, n.death_year_hijri, n.reliability_grade,
