@@ -17,9 +17,10 @@
   <div class="eyebrow">ILM API — DOCUMENTATION</div>
   <h1>A unified home for Quran, Hadith, and Islamic scholarship</h1>
   <p class="lede">
-    Built for researchers, scholars, and students — Quran with multiple translations and tafsir,
+    Built for researchers, scholars, and students — Quran with 19 translations across 15 languages,
+    word-by-word translation and grammar for every word in the Quran, tafsir,
     all six canonical hadith collections, isnad chains, root-word morphology, thematic cross-references,
-    fiqh comparisons across madhabs, prayer times, and du'as. Free to start.
+    prayer times, and du'as. Free to start.
   </p>
 
   <a href="/read.html" style="display:inline-block;margin-bottom:28px;color:#C9A24B;font-size:15px;font-weight:500;">Try it — read the Quran and search Hadith right now &rarr;</a>
@@ -33,8 +34,9 @@
   </p>
   <p class="lede">
     <strong style="color:#F3ECDA;">Students</strong> get a simplified
-    translation mode, word-by-word Arabic breakdowns with root and grammar,
-    audio recitation, and bookmarking to build a personal study collection.
+    translation mode, word-by-word Arabic breakdowns with translation, transliteration,
+    root and grammar (plus per-word audio), recitation by 13 reciters, and bookmarking
+    to build a personal study collection.
   </p>
   <p class="lede">
     <strong style="color:#F3ECDA;">Researchers</strong> get BibTeX/APA
@@ -43,7 +45,7 @@
   </p>
   <p class="lede">
     <strong style="color:#F3ECDA;">Scholars</strong> get multiple tafsir
-    sources side-by-side, madhab comparisons on fiqh questions, thematic
+    sources side-by-side (a small verified fiqh comparison set is available and growing), thematic
     cross-referencing between ayahs and hadith, and Arabic root-word search
     across the whole Quran.
   </p>
@@ -66,10 +68,10 @@
     <tr><td>GET</td><td><code>/v1/quran/surahs</code></td><td>List all 114 surahs</td></tr>
     <tr><td>GET</td><td><code>/v1/quran/:surah?translation=</code></td><td>Full surah with a chosen translation</td></tr>
     <tr><td>GET</td><td><code>/v1/quran/:surah/:ayah</code></td><td>Single ayah</td></tr>
-    <tr><td>GET</td><td><code>/v1/quran/:surah/:ayah/words</code></td><td>Word-by-word: Arabic, root, grammar</td></tr>
+    <tr><td>GET</td><td><code>/v1/quran/:surah/:ayah/words</code></td><td>Word-by-word: Arabic, translation, transliteration, root, grammar, per-word audio</td></tr>
     <tr><td>GET</td><td><code>/v1/quran/:surah/:ayah/cite?format=bibtex|apa</code></td><td>Citation export</td></tr>
     <tr><td>GET</td><td><code>/v1/quran/:surah/:ayah/audio?reciter=</code></td><td>Recitation audio URL</td></tr>
-    <tr><td>GET</td><td><code>/v1/quran/translations</code></td><td>Includes a simplified/beginner option</td></tr>
+    <tr><td>GET</td><td><code>/v1/quran/translations</code></td><td>19 translations across 15 languages</td></tr>
     <tr><td>GET</td><td><code>/v1/quran/export?translation=</code></td><td>Full Quran dataset <span class="tier-badge">academic/pro</span></td></tr>
   </table>
 
@@ -96,7 +98,7 @@
     <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
     <tr><td>GET</td><td><code>/v1/topics</code></td><td>Thematic index</td></tr>
     <tr><td>GET</td><td><code>/v1/topics/:slug</code></td><td>Ayahs + hadith tagged under a topic</td></tr>
-    <tr><td>GET</td><td><code>/v1/fiqh/search?topic=</code></td><td>Rulings compared across madhabs</td></tr>
+    <tr><td>GET</td><td><code>/v1/fiqh/search?topic=</code></td><td>Rulings compared across madhabs (small verified starter set)</td></tr>
   </table>
 
   <h2>Prayer Times & Du'as</h2>

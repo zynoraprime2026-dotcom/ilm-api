@@ -144,13 +144,13 @@ router.get('/:surah/:ayah/words', async (req, res) => {
   const surahNum = parseInt(req.params.surah, 10);
   const ayahNum = parseInt(req.params.ayah, 10);
 
-  const cacheKey = `quran:words:${surahNum}:${ayahNum}`;
+  const cacheKey = `quran:words:v2:${surahNum}:${ayahNum}`;
   const cached = await getCached(cacheKey);
   if (cached) return res.json(cached);
 
   const { rows } = await db.query(
     `SELECT aw.word_position, aw.text_arabic, aw.transliteration, aw.translation,
-            aw.part_of_speech, r.root_arabic, r.root_transliteration
+            aw.part_of_speech, aw.audio_url, r.root_arabic, r.root_transliteration
      FROM ayah_words aw
      JOIN ayahs a ON a.id = aw.ayah_id
      LEFT JOIN quranic_roots r ON r.id = aw.root_id

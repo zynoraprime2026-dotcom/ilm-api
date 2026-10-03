@@ -66,11 +66,32 @@
       <div class="row">
         <select id="surah-select"></select>
         <select id="translation-select">
-          <option value="en.sahih">Saheeh International</option>
-          <option value="en.yusufali">Abdullah Yusuf Ali</option>
-          <option value="en.pickthall">M. M. Pickthall</option>
-          <option value="en.hilali">Hilali &amp; Khan</option>
-          <option value="en.clearquran">The Clear Quran (simplified)</option>
+          <optgroup label="English">
+            <option value="en.sahih">Saheeh International</option>
+            <option value="en.yusufali">Abdullah Yusuf Ali</option>
+            <option value="en.pickthall">M. M. Pickthall</option>
+            <option value="en.hilali">Hilali &amp; Khan</option>
+            <option value="en.clearquran">The Clear Quran (simplified)</option>
+          </optgroup>
+          <optgroup label="African languages">
+            <option value="ha.gumi">Hausa — Abubakar Gumi</option>
+            <option value="sw.barwani">Swahili — Ali Muhsin Al-Barwani</option>
+            <option value="am.sadiq">Amharic — Sadiq &amp; Sani</option>
+          </optgroup>
+          <optgroup label="Asian languages">
+            <option value="ur.jalandhari">Urdu — F. M. Jalandhari</option>
+            <option value="bn.mujiburrahman">Bengali — Mujibur Rahman</option>
+            <option value="id.kemenag">Indonesian — Kemenag</option>
+            <option value="ms.basmeih">Malay — Basmeih</option>
+            <option value="zh.majian">Chinese — Ma Jian</option>
+          </optgroup>
+          <optgroup label="European languages">
+            <option value="fr.hamidullah">French — Hamidullah</option>
+            <option value="es.garcia">Spanish — Isa Garcia</option>
+            <option value="de.bubenheim">German — Bubenheim &amp; Elyas</option>
+            <option value="pt.nasr">Portuguese — Helmi Nasr</option>
+            <option value="ru.kuliev">Russian — Kuliev</option>
+          </optgroup>
         </select>
       </div>
       <button id="quran-read-btn">Read Surah</button>
@@ -251,7 +272,7 @@ document.getElementById('quran-read-btn').addEventListener('click', async () => 
         <span class="card-label">${escapeHtml(data.surah.name_english.toUpperCase())} — AYAH ${escapeHtml(a.ayah_number)}</span>
         <div class="arabic">${escapeHtml(a.text_arabic)}</div>
         <div class="body-text">${escapeHtml(a.translation || '(no translation available)')}</div>
-        <button class="small-btn words-toggle">Word-by-word grammar ▾</button>
+        <button class="small-btn words-toggle">Word-by-word translation &amp; grammar ▾</button>
         <div class="words-grid" style="display:none;"></div>
       </div>`).join('');
     el.querySelectorAll('.words-toggle').forEach((btn) => {
@@ -267,11 +288,28 @@ document.getElementById('quran-read-btn').addEventListener('click', async () => 
         try {
           const wdata = await apiGet(`/v1/quran/${card.dataset.surah}/${card.dataset.ayah}/words`);
           grid.innerHTML = wdata.words.map((w) => `
-            <div class="word-chip">
+            <div class="word-chip" data-audio="${w.audio_url ? escapeHtml('https://audio.qurancdn.com/' + w.audio_url) : ''}">
+              ${w.audio_url ? '<span class="word-play">▶</span>' : ''}
               <span class="wa">${escapeHtml(w.text_arabic)}</span>
+              <span class="wl">${escapeHtml(w.transliteration || '')}</span>
+              <span class="wt">${escapeHtml(w.translation || '')}</span>
               <span class="wp">${escapeHtml(w.part_of_speech || '')}</span>
               <span class="wr">${w.root_arabic ? 'root: ' + escapeHtml(w.root_arabic) : ''}</span>
             </div>`).join('');
+        grid.querySelectorAll('.word-chip[data-audio]:not([data-audio=""])').forEach((chip) => {
+          chip.addEventListener('click', () => {
+            const url = chip.dataset.audio;
+            if (!url) return;
+            let player = document.getElementById('word-player');
+            if (!player) {
+              player = document.createElement('audio');
+              player.id = 'word-player';
+              document.body.appendChild(player);
+            }
+            player.src = url;
+            player.play();
+          });
+        });
         } catch (err) {
           grid.innerHTML = `<div class="error">${escapeHtml(err.message)}</div>`;
         }

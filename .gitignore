@@ -55,3 +55,7 @@ Thumbs.db
 
 # Uploaded assets (not part of source)
 attached_assets/
+
+# fetched bulk data caches (re-download via scripts/fetchWords.cjs & fetchTranslations.cjs)
+data/qurancom-words.json
+data/tr-*.json

@@ -29,5 +29,8 @@ Built by Abdulrahim Abubakar · Zynora AI · Tarkwa, Ghana
 2. `npm run seed:quran` — surahs, ayahs, translations (Al Quran Cloud API)
 3. `npm run seed:roots` — word-by-word morphology + roots from `data/quran-morphology.txt` (Quranic Arabic Corpus, GNU-licensed, included in this repo; format verified 2026-10-01)
 4. `npm run seed:hadith`, `seed:tafsir`, `seed:duas`, `seed:fiqh`, `seed:topics`, `seed:reciters` — the remaining datasets
+5. `node scripts/fetchWords.cjs` + `node scripts/rebuildWords.cjs` — complete word-by-word data (all 77,429 Quran words: Arabic, translation, transliteration, grammar + root merged from the Quranic Arabic Corpus, per-word audio) sourced from the quran.com API v4
+6. `node scripts/fetchTranslations.cjs` + `node scripts/seedNewTranslations.cjs` — 14 additional Quran translations (French, Spanish, German, Portuguese, Russian, Urdu, Bengali, Indonesian, Malay, Chinese, Hausa, Swahili, Amharic, Turkish), sourced from the quran.com API v4
+7. `node scripts/seedNewReciters.cjs` — expands reciters to 13 (everyayah.com audio)
 
-`seed:roots` fills `ayah_words` (Arabic form + root + part of speech with case). Transliteration/translation columns are populated by future work.
+`rebuildWords.cjs` fills `ayah_words` completely: every word of the Quran (77,429 rows covering all 6,236 ayahs) with full Uthmani text, translation, transliteration, per-word audio, and (where the corpus alignment matched) part of speech with case and root. Coverage: 100% translation/transliteration, 43% grammar + root.
