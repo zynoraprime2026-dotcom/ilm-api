@@ -1,42 +1,67 @@
-// Starter fiqh rulings comparing madhabs on common topics. Like narrators and
-// topics, this is a curation starter — there's no bulk open dataset for
-// structured, attributed fiqh rulings across madhabs.
-// Run: npm run seed:fiqh
+// Seed the fiqh comparative dataset (data/fiqh-part1/2/3.js) into fiqh_rulings.
+// Adds chapter + evidence columns, replaces all rows deterministically.
+// To add more rulings later: add topics to the data files and rerun this script.
+// Usage: DATABASE_URL=... node scripts/seedFiqh.cjs
+const { neon } = require('@neondatabase/serverless');
+const sql = neon(process.env.DATABASE_URL);
 
-require('dotenv').config();
-const db = require('../src/config/db');
-
-const SAMPLE_RULINGS = [
-  {
-    topic: 'Breaking the fast due to illness',
-    madhab: 'Hanafi',
-    question: 'Is a sick person permitted to break their fast during Ramadan?',
-    ruling: 'Yes — a person whose illness would be worsened by fasting, or who fears delayed recovery, is permitted to break the fast and make up the missed days later.',
-    reference: 'Al-Hidayah',
-  },
-  {
-    topic: 'Breaking the fast due to illness',
-    madhab: 'Shafi\'i',
-    question: 'Is a sick person permitted to break their fast during Ramadan?',
-    ruling: 'Yes, with the same underlying principle — hardship that fasting would cause or worsen permits breaking the fast, followed by making up the days once able.',
-    reference: 'Minhaj al-Talibin',
-  },
+const parts = [
+  require('../data/fiqh-part1.js'),
+  require('../data/fiqh-part2.js'),
+  require('../data/fiqh-part3.js'),
 ];
+const DEFAULT_REF = {
+  "Hanafi": "Al-Hidayah (al-Marghinani)",
+  "Shafi'i": "Minhaj al-Talibin (al-Nawawi)",
+  "Maliki": "Mukhtasar Khalil",
+  "Hanbali": "Al-Mughni (Ibn Qudamah)",
+};
 
-async function seed() {
-  console.log('Inserting sample fiqh rulings...');
-  for (const r of SAMPLE_RULINGS) {
-    await db.query(
-      `INSERT INTO fiqh_rulings (topic, madhab, question, ruling, reference)
-       VALUES ($1, $2, $3, $4, $5)`,
-      [r.topic, r.madhab, r.question, r.ruling, r.reference]
+(async () => {
+  await sql.query('ALTER TABLE fiqh_rulings ADD COLUMN IF NOT EXISTS chapter TEXT');
+  await sql.query('ALTER TABLE fiqh_rulings ADD COLUMN IF NOT EXISTS evidence TEXT');
+
+  const rows = [];
+  for (const topic of parts.flat()) {
+    for (const r of topic.rows) {
+      rows.push([
+        topic.chapter,
+        topic.topic,
+        r.madhab,
+        topic.question,
+        r.ruling,
+        r.reference || DEFAULT_REF[r.madhab] || '',
+        r.evidence || null,
+      ]);
+    }
+  }
+  console.log(`dataset: ${rows.length} rulings`);
+
+  await sql.query('DELETE FROM fiqh_rulings');
+
+  const CHUNK = 50;
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const batch = rows.slice(i, i + CHUNK);
+    const params = [];
+    const tuples = batch.map((r) => {
+      const o = params.length;
+      params.push(...r);
+      return `($${o + 1}::text, $${o + 2}::text, $${o + 3}::text, $${o + 4}::text, $${o + 5}::text, $${o + 6}::text, $${o + 7}::text)`;
+    });
+    await sql.query(
+      `INSERT INTO fiqh_rulings (chapter, topic, madhab, question, ruling, reference, evidence)
+       VALUES ${tuples.join(',')}`,
+      params
     );
   }
-  console.log('Fiqh seed complete. Expand SAMPLE_RULINGS as you curate more comparisons.');
-  process.exit(0);
-}
 
-seed().catch((err) => {
-  console.error('Seed failed:', err);
-  process.exit(1);
-});
+  const check = await sql.query(
+    `SELECT count(*) AS total,
+            count(DISTINCT topic) AS topics,
+            count(DISTINCT chapter) AS chapters,
+            count(*) FILTER (WHERE evidence IS NOT NULL) AS with_evidence
+     FROM fiqh_rulings`
+  );
+  console.log('VERIFY:', JSON.stringify(check[0]));
+  console.log('FIQH SEED COMPLETE');
+})().catch((e) => { console.error('FAILED:', e.message); process.exit(1); });

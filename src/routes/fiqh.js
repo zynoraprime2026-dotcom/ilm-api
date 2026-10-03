@@ -2,25 +2,75 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 
-// GET /v1/fiqh/search?topic=fasting — rulings across madhabs for a topic
+// GET /v1/fiqh/chapters — list chapters with topic and ruling counts
+router.get('/chapters', async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  const { rows } = await db.query(
+    `SELECT chapter, count(DISTINCT topic) AS topics, count(*) AS rulings
+     FROM fiqh_rulings GROUP BY chapter ORDER BY min(id)`
+  );
+  res.json({ count: rows.length, chapters: rows });
+});
+
+// GET /v1/fiqh/search?topic=fasting&madhab=Hanafi&chapter=Fasting — rulings for a topic
 router.get('/search', async (req, res) => {
-  const { topic } = req.query;
-  if (!topic) return res.status(400).json({ error: 'Query param "topic" is required' });
+  const { topic, madhab, chapter } = req.query;
+  if (!topic && !madhab && !chapter) {
+    return res.status(400).json({ error: 'Provide at least one of: topic, madhab, chapter' });
+  }
+
+  const conditions = [];
+  const params = [];
+  if (topic) {
+    params.push(`%${topic}%`);
+    conditions.push(`topic ILIKE $${params.length}`);
+  }
+  if (madhab) {
+    params.push(`%${madhab}%`);
+    conditions.push(`madhab ILIKE $${params.length}`);
+  }
+  if (chapter) {
+    params.push(`%${chapter}%`);
+    conditions.push(`chapter ILIKE $${params.length}`);
+  }
 
   const { rows } = await db.query(
-    `SELECT id, topic, madhab, question, ruling, reference
+    `SELECT id, chapter, topic, madhab, question, ruling, reference, evidence
      FROM fiqh_rulings
-     WHERE topic ILIKE $1
-     ORDER BY madhab`,
-    [`%${topic}%`]
+     WHERE ${conditions.join(' AND ')}
+     ORDER BY chapter, topic,
+              CASE madhab
+                WHEN 'Consensus (all four madhabs)' THEN 0
+                WHEN 'Hanafi' THEN 1
+                WHEN 'Maliki' THEN 2
+                WHEN 'Shafi\'i' THEN 3
+                WHEN 'Hanbali' THEN 4
+                ELSE 5
+              END`,
+    params
   );
 
-  res.json({ topic, count: rows.length, rulings: rows });
+  res.json({
+    count: rows.length,
+    note: 'Mainstream comparative positions from classical manuals. For a personal ruling (fatwa), consult a qualified scholar.',
+    rulings: rows,
+  });
+});
+
+// GET /v1/fiqh/topics — all topics with their chapters
+router.get('/topics', async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  const { rows } = await db.query(
+    `SELECT DISTINCT chapter, topic, question FROM fiqh_rulings ORDER BY chapter, topic`
+  );
+  res.json({ count: rows.length, topics: rows });
 });
 
 // GET /v1/fiqh/:id — single ruling by id
 router.get('/:id', async (req, res) => {
-  const { rows } = await db.query('SELECT * FROM fiqh_rulings WHERE id = $1', [req.params.id]);
+  const id = parseInt(req.params.id, 10);
+  if (isNaN(id)) return res.status(400).json({ error: 'Ruling id must be a number' });
+  const { rows } = await db.query('SELECT * FROM fiqh_rulings WHERE id = $1', [id]);
   if (rows.length === 0) return res.status(404).json({ error: 'Ruling not found' });
   res.json(rows[0]);
 });
