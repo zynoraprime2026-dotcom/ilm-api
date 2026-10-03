@@ -8,7 +8,7 @@ module.exports = [
     author: 'Burhan al-Din al-Marghinani',
     death_year_ah: 593,
     school: 'Hanafi',
-    description: 'The standard Hanafi manual of fiqh, presented as a comparative digest of the school with its evidence. The most-studied Hanafi text worldwide; famously carried to the grave of its author by kings. Basis of the major commentaries Fath al-Qadir and al-'Inayah.',
+    description: 'The standard Hanafi manual of fiqh, presented as a comparative digest of the school with its evidence. The most-studied Hanafi text worldwide; famously carried to the grave of its author by kings. Basis of the major commentaries Fath al-Qadir and al-\'Inayah.',
     access_url: 'https://archive.org/search?query=al-Hidayah+al-Marghinani',
   },
   {
