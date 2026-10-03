@@ -63,12 +63,30 @@ router.get('/search', async (req, res) => {
   });
 });
 
-// GET /v1/fiqh/books — the classical manuals and collections cited by the dataset,
-// with metadata and research access links. For study and verification purposes.
+// GET /v1/fiqh/books?madhab=&level= — the classical manuals and collections cited by
+// the dataset, with metadata and research access links. For study and verification.
+// Includes per-madhab study paths (beginner -> advanced) and the evidence-first
+// tradition for those not following a madhab.
 router.get('/books', async (req, res) => {
   res.set('Cache-Control', 'public, max-age=86400');
-  const { rows } = await db.query('SELECT * FROM fiqh_books ORDER BY id');
+  const { madhab, level } = req.query;
+  let q = 'SELECT * FROM fiqh_books';
+  const where = [];
+  const params = [];
+  if (madhab) { params.push(`%${madhab}%`); where.push(`school ILIKE $${params.length}`); }
+  if (level) { params.push(`%${level}%`); where.push(`level ILIKE $${params.length}`); }
+  if (where.length) q += ' WHERE ' + where.join(' AND ');
+  q += ' ORDER BY id';
+  const { rows } = await db.query(q, params);
   res.json({ count: rows.length, books: rows });
+});
+
+// GET /v1/fiqh/scholars — scholars of the evidence-first (no exclusive madhab)
+// tradition, for research purposes. Presented alongside, not above, the four schools.
+router.get('/scholars', async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  const { rows } = await db.query('SELECT * FROM fiqh_scholars ORDER BY death_year_ah');
+  res.json({ count: rows.length, scholars: rows });
 });
 
 // GET /v1/fiqh/topics — all topics with their chapters
