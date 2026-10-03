@@ -49,7 +49,7 @@
   <div class="nav-links"><a href="/prayer.html">Prayer times &amp; Qibla direction →</a></div>
   <div class="eyebrow">ILM API — READ</div>
   <h1>Read &amp; search Islamic knowledge</h1>
-  <p class="lede">No account or technical knowledge needed. Bilingual Arabic + English hadith, word-by-word Quran grammar, and root-word search are all live.</p>
+  <p class="lede">No account or technical knowledge needed. Bilingual Arabic + English hadith, word-by-word Quran grammar, root-word search, and a classical books &amp; scholars registry (per-madhab study paths plus the evidence-first tradition) are all live.</p>
 
   <div class="tabs">
     <button class="tab active" data-tab="quran">Quran</button>
@@ -164,10 +164,50 @@
     <div class="controls">
       <div class="row">
         <input id="fiqh-topic" type="text" placeholder="Topic — e.g. fasting, prayer" />
+        <select id="fiqh-madhab-select">
+          <option value="">All madhabs</option>
+          <option value="Hanafi">Hanafi</option>
+          <option value="Maliki">Maliki</option>
+          <option value="Shafi'i">Shafi'i</option>
+          <option value="Hanbali">Hanbali</option>
+          <option value="Consensus">Consensus (ijma)</option>
+        </select>
+      </div>
+      <div class="row">
+        <select id="fiqh-chapter-select">
+          <option value="">All chapters</option>
+        </select>
         <button id="fiqh-btn">Compare Rulings</button>
       </div>
     </div>
     <div id="fiqh-results"></div>
+
+    <div class="controls" style="margin-top:24px;">
+      <div class="eyebrow" style="margin-bottom:10px;">CLASSICAL BOOKS &amp; SCHOLARS — for research</div>
+      <div class="row">
+        <select id="books-madhab-select">
+          <option value="">All schools</option>
+          <option value="Hanafi">Hanafi</option>
+          <option value="Maliki">Maliki</option>
+          <option value="Shafi'i">Shafi'i</option>
+          <option value="Hanbali">Hanbali</option>
+          <option value="Evidence-first">Evidence-first (no madhab)</option>
+          <option value="Hadith collection">Hadith collections</option>
+        </select>
+        <select id="books-level-select">
+          <option value="">Any level</option>
+          <option value="beginner">Beginner</option>
+          <option value="intermediate">Intermediate</option>
+          <option value="advanced">Advanced</option>
+          <option value="reference">Reference / gloss</option>
+        </select>
+      </div>
+      <div class="row">
+        <button id="books-btn">Browse Books</button>
+        <button id="scholars-btn">Browse No-Madhab Scholars</button>
+      </div>
+    </div>
+    <div id="books-results"></div>
   </div>
 
   <div class="panel" id="panel-roots">
@@ -429,20 +469,79 @@ document.getElementById('dua-btn').addEventListener('click', async () => {
 });
 
 // --- Fiqh ---
+async function loadFiqhChapters() {
+  try {
+    const data = await apiGet('/v1/fiqh/chapters');
+    const select = document.getElementById('fiqh-chapter-select');
+    data.chapters.forEach((c) => {
+      const opt = document.createElement('option');
+      opt.value = c.chapter; opt.textContent = `${c.chapter} (${c.rulings})`;
+      select.appendChild(opt);
+    });
+  } catch (err) { /* chapter list is a convenience; fail silently */ }
+}
+
 document.getElementById('fiqh-btn').addEventListener('click', async () => {
   const topic = document.getElementById('fiqh-topic').value.trim();
+  const madhab = document.getElementById('fiqh-madhab-select').value;
+  const chapter = document.getElementById('fiqh-chapter-select').value;
   const el = document.getElementById('fiqh-results');
-  if (!topic) { el.innerHTML = '<div class="error">Enter a topic to search.</div>'; return; }
+  if (!topic && !chapter) { el.innerHTML = '<div class="error">Enter a topic or pick a chapter to search.</div>'; return; }
   el.innerHTML = '<div class="status">Searching…</div>';
   try {
-    const data = await apiGet(`/v1/fiqh/search?topic=${encodeURIComponent(topic)}`);
-    if (data.rulings.length === 0) { el.innerHTML = '<div class="status">No rulings found for this topic yet — this is a starter dataset.</div>'; return; }
+    const params = new URLSearchParams();
+    if (topic) params.set('topic', topic);
+    if (madhab) params.set('madhab', madhab);
+    if (chapter) params.set('chapter', chapter);
+    const data = await apiGet(`/v1/fiqh/search?${params.toString()}`);
+    if (data.rulings.length === 0) { el.innerHTML = '<div class="status">No rulings found for this search.</div>'; return; }
     el.innerHTML = data.rulings.map((r) => `
       <div class="card">
         <span class="madhab-tag">${escapeHtml(r.madhab)}</span>
         <div class="body-text"><strong style="color:#F3ECDA;">${escapeHtml(r.question)}</strong></div>
         <div class="body-text" style="margin-top:8px;">${escapeHtml(r.ruling)}</div>
+        ${r.evidence ? `<div class="note">Evidence: ${escapeHtml(r.evidence)}</div>` : ''}
         ${r.reference ? `<div class="note">— ${escapeHtml(r.reference)}</div>` : ''}
+      </div>`).join('');
+  } catch (err) { showError(el, err); }
+});
+
+// --- Fiqh: Books & Scholars registry ---
+document.getElementById('books-btn').addEventListener('click', async () => {
+  const madhab = document.getElementById('books-madhab-select').value;
+  const level = document.getElementById('books-level-select').value;
+  const el = document.getElementById('books-results');
+  el.innerHTML = '<div class="status">Loading…</div>';
+  try {
+    const params = new URLSearchParams();
+    if (madhab) params.set('madhab', madhab);
+    if (level) params.set('level', level);
+    const data = await apiGet(`/v1/fiqh/books?${params.toString()}`);
+    if (data.books.length === 0) { el.innerHTML = '<div class="status">No books match this filter.</div>'; return; }
+    el.innerHTML = data.books.map((b) => `
+      <div class="card">
+        <span class="madhab-tag">${escapeHtml(b.school)}${b.level ? ' · ' + escapeHtml(b.level) : ''}</span>
+        <div class="body-text"><strong style="color:#F3ECDA;">${escapeHtml(b.title)}</strong></div>
+        <div class="note">${escapeHtml(b.author)}${b.death_year_ah ? ' (d. ' + escapeHtml(b.death_year_ah) + ' AH)' : ''}</div>
+        <div class="body-text" style="margin-top:8px;">${escapeHtml(b.description)}</div>
+        ${b.access_url ? `<a class="small-btn" href="${escapeHtml(b.access_url)}" target="_blank" rel="noopener" style="display:inline-block; margin-top:8px; text-decoration:none;">Research this book →</a>` : ''}
+      </div>`).join('');
+  } catch (err) { showError(el, err); }
+});
+
+document.getElementById('scholars-btn').addEventListener('click', async () => {
+  const el = document.getElementById('books-results');
+  el.innerHTML = '<div class="status">Loading…</div>';
+  try {
+    const data = await apiGet('/v1/fiqh/scholars');
+    if (data.scholars.length === 0) { el.innerHTML = '<div class="status">No scholars found.</div>'; return; }
+    el.innerHTML = `<div class="note" style="margin-bottom:10px;">Scholars of the evidence-first (no exclusive madhab) tradition — for research purposes.</div>` + data.scholars.map((s) => `
+      <div class="card">
+        <div class="body-text"><strong style="color:#F3ECDA;">${escapeHtml(s.name)}</strong></div>
+        <div class="note">d. ${escapeHtml(s.death_year_ah)} AH</div>
+        <div class="body-text" style="margin-top:8px;">${escapeHtml(s.description)}</div>
+        <div class="note" style="margin-top:6px;">Known works: ${escapeHtml(s.known_works)}</div>
+        ${s.access_url ? `<a class="small-btn" href="${escapeHtml(s.access_url)}" target="_blank" rel="noopener" style="display:inline-block; margin-top:8px; text-decoration:none;">Research →</a>` : ''}
       </div>`).join('');
   } catch (err) { showError(el, err); }
 });
@@ -467,6 +566,7 @@ document.getElementById('root-btn').addEventListener('click', async () => {
 
 populateSurahSelect();
 loadDuaCategories();
+loadFiqhChapters();
 </script>
 </body>
 </html>
