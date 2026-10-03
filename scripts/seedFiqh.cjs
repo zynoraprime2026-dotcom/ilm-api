@@ -9,6 +9,7 @@ const parts = [
   require('../data/fiqh-part1.js'),
   require('../data/fiqh-part2.js'),
   require('../data/fiqh-part3.js'),
+  require('../data/fiqh-part4.js'),
 ];
 const DEFAULT_REF = {
   "Hanafi": "Al-Hidayah (al-Marghinani)",
