@@ -94,7 +94,13 @@
           </optgroup>
         </select>
       </div>
-      <button id="quran-read-btn">Read Surah</button>
+      <div class="row">
+        <select id="reciter-select"><option value="">Loading reciters…</option></select>
+        <button id="quran-read-btn">Read Surah</button>
+      </div>
+      <div class="row">
+        <button id="listen-btn">▶ Listen to this surah (13 reciters)</button>
+      </div>
     </div>
     <div id="quran-results"></div>
   </div>
@@ -299,8 +305,32 @@ function showError(element, error, suffix = '') {
   element.innerHTML = `<div class="error">${escapeHtml(error?.message || 'Something went wrong')}${escapeHtml(suffix)}</div>`;
 }
 
+// --- Quran: reciters & audio ---
+let recitersLoaded = false;
+async function loadReciters() {
+  if (recitersLoaded) return;
+  try {
+    const reciters = await apiGet('/v1/reciters');
+    const select = document.getElementById('reciter-select');
+    select.innerHTML = '';
+    reciters.forEach((r) => {
+      const opt = document.createElement('option');
+      opt.value = r.slug; opt.textContent = r.name;
+      select.appendChild(opt);
+    });
+    recitersLoaded = true;
+  } catch (err) { /* audio is optional */ }
+}
+
+let quranAudio = null;
+function currentReciter() {
+  const select = document.getElementById('reciter-select');
+  return select.value || 'alafasy';
+}
+
 // --- Quran ---
 document.getElementById('quran-read-btn').addEventListener('click', async () => {
+  loadReciters();
   const surah = document.getElementById('surah-select').value;
   const translation = document.getElementById('translation-select').value;
   const el = document.getElementById('quran-results');
@@ -313,8 +343,25 @@ document.getElementById('quran-read-btn').addEventListener('click', async () => 
         <div class="arabic">${escapeHtml(a.text_arabic)}</div>
         <div class="body-text">${escapeHtml(a.translation || '(no translation available)')}</div>
         <button class="small-btn words-toggle">Word-by-word translation &amp; grammar ▾</button>
+        <button class="small-btn ayah-listen" data-ayah="${escapeHtml(a.ayah_number)}" style="margin-left:6px;">▶ Listen</button>
         <div class="words-grid" style="display:none;"></div>
       </div>`).join('');
+    el.querySelectorAll('.ayah-listen').forEach((btn) => {
+      btn.addEventListener('click', async (ev) => {
+        ev.stopPropagation();
+        if (btn.dataset.playing === '1') { quranAudio && quranAudio.pause(); btn.dataset.playing = ''; btn.textContent = '▶ Listen'; return; }
+        btn.textContent = '…';
+        try {
+          const card = btn.closest('.card');
+          const data = await apiGet(`/v1/quran/${card.dataset.surah}/${btn.dataset.ayah}/audio?reciter=${encodeURIComponent(currentReciter())}`);
+          btn.dataset.playing = '1';
+          btn.textContent = '⏸';
+          quranAudio = new Audio(data.audio_url);
+          quranAudio.addEventListener('ended', () => { btn.dataset.playing = ''; btn.textContent = '▶ Listen'; }, { once: true });
+          quranAudio.play().catch(() => {});
+        } catch (err) { btn.textContent = '▶ Listen'; }
+      });
+    });
     el.querySelectorAll('.words-toggle').forEach((btn) => {
       btn.addEventListener('click', async () => {
         const card = btn.closest('.card');
@@ -567,6 +614,28 @@ document.getElementById('root-btn').addEventListener('click', async () => {
 populateSurahSelect();
 loadDuaCategories();
 loadFiqhChapters();
+loadReciters();
+document.getElementById('listen-btn').addEventListener('click', async () => {
+  const cards = Array.from(document.querySelectorAll('#quran-results .card[data-surah]'));
+  if (cards.length === 0) { return; }
+  const btn = document.getElementById('listen-btn');
+  const original = btn.textContent;
+  const reciter = currentReciter();
+  for (const card of cards) {
+    btn.textContent = `▶ Playing ayah ${card.dataset.ayah}…`;
+    try {
+      const data = await apiGet(`/v1/quran/${card.dataset.surah}/${card.dataset.ayah}/audio?reciter=${encodeURIComponent(reciter)}`);
+      await new Promise((resolve) => {
+        if (quranAudio) { quranAudio.pause(); }
+        quranAudio = new Audio(data.audio_url);
+        quranAudio.addEventListener('ended', resolve, { once: true });
+        quranAudio.addEventListener('error', resolve, { once: true });
+        quranAudio.play().catch(resolve);
+      });
+    } catch (err) { /* skip on error */ }
+  }
+  btn.textContent = original;
+});
 </script>
 </body>
 </html>
