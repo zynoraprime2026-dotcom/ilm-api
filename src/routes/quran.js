@@ -4,6 +4,19 @@ const db = require('../config/db');
 const { getCached, setCached } = require('../config/cache');
 const requireTier = require('../middleware/requireTier');
 
+const { QURAN_TRANSLATIONS, normalizeLanguage } = require('../config/languages');
+
+// Resolve the effective translation code from ?translation= (explicit) or
+// ?language=xx (preferred translation for that language). Returns null for
+// language=ar (Arabic only, no translation join).
+function resolveQuranTranslation(req) {
+  if (req.query.translation) return req.query.translation;
+  const lang = normalizeLanguage(req.query.language);
+  if (!lang) return 'en.sahih';
+  if (lang === 'ar') return null;
+  return (QURAN_TRANSLATIONS[lang] || ['en.sahih'])[0];
+}
+
 // GET /v1/quran/translations — list all available translations
 router.get('/translations', async (req, res) => {
   res.set('Cache-Control', 'private, max-age=86400');
@@ -46,7 +59,7 @@ router.get('/export', requireTier('academic', 'pro'), async (req, res) => {
 // GET /v1/quran/:surah?translation=en.sahih — full surah with translation
 router.get('/:surah', async (req, res) => {
   const surahNum = parseInt(req.params.surah, 10);
-  const translationCode = req.query.translation || 'en.sahih';
+  const translationCode = resolveQuranTranslation(req);
   // Optional pagination for long surahs: /:surah?page=2&limit=20 browses ayahs
   const page = req.query.page ? Math.max(parseInt(req.query.page, 10), 1) : null;
   const limit = req.query.limit ? Math.min(parseInt(req.query.limit, 10) || 20, 100) : null;
@@ -71,16 +84,28 @@ router.get('/:surah', async (req, res) => {
     const offset = (page - 1) * limit;
     const total = surah.ayah_count;
     const lastPage = Math.max(Math.ceil(total / limit), 1);
-    const ayahsResult = await db.query(
-      `SELECT a.ayah_number, a.text_arabic, at.text AS translation
-       FROM ayahs a
-       JOIN translations t ON t.code = $2
-       LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
-       WHERE a.surah_number = $1
-       ORDER BY a.ayah_number
-       LIMIT $3 OFFSET $4`,
-      [surahNum, translationCode, limit, offset]
-    );
+    let ayahsResult;
+    if (translationCode) {
+      ayahsResult = await db.query(
+        `SELECT a.ayah_number, a.text_arabic, at.text AS translation
+         FROM ayahs a
+         JOIN translations t ON t.code = $2
+         LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
+         WHERE a.surah_number = $1
+         ORDER BY a.ayah_number
+         LIMIT $3 OFFSET $4`,
+        [surahNum, translationCode, limit, offset]
+      );
+    } else {
+      ayahsResult = await db.query(
+        `SELECT a.ayah_number, a.text_arabic
+         FROM ayahs a
+         WHERE a.surah_number = $1
+         ORDER BY a.ayah_number
+         LIMIT $2 OFFSET $3`,
+        [surahNum, limit, offset]
+      );
+    }
     ayahs = ayahsResult.rows;
     pagination = {
       page, limit, total, total_pages: lastPage,
@@ -89,21 +114,33 @@ router.get('/:surah', async (req, res) => {
       prev_page: page > 1 ? page - 1 : null,
     };
   } else {
-    const ayahsResult = await db.query(
-      `SELECT a.ayah_number, a.text_arabic, at.text AS translation
-       FROM ayahs a
-       JOIN translations t ON t.code = $2
-       LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
-       WHERE a.surah_number = $1
-       ORDER BY a.ayah_number`,
-      [surahNum, translationCode]
-    );
+    let ayahsResult;
+    if (translationCode) {
+      ayahsResult = await db.query(
+        `SELECT a.ayah_number, a.text_arabic, at.text AS translation
+         FROM ayahs a
+         JOIN translations t ON t.code = $2
+         LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
+         WHERE a.surah_number = $1
+         ORDER BY a.ayah_number`,
+        [surahNum, translationCode]
+      );
+    } else {
+      ayahsResult = await db.query(
+        `SELECT a.ayah_number, a.text_arabic
+         FROM ayahs a
+         WHERE a.surah_number = $1
+         ORDER BY a.ayah_number`,
+        [surahNum]
+      );
+    }
     ayahs = ayahsResult.rows;
   }
 
   const payload = {
     surah,
     translation_code: translationCode,
+    language: normalizeLanguage(req.query.language) || 'en',
     pagination,
     ayahs,
   };
@@ -116,24 +153,40 @@ router.get('/:surah', async (req, res) => {
 router.get('/:surah/:ayah', async (req, res) => {
   const surahNum = parseInt(req.params.surah, 10);
   const ayahNum = parseInt(req.params.ayah, 10);
-  const translationCode = req.query.translation || 'en.sahih';
+  const translationCode = resolveQuranTranslation(req);
 
   const cacheKey = `quran:ayah:${surahNum}:${ayahNum}:${translationCode}`;
   const cached = await getCached(cacheKey);
   if (cached) return res.json(cached);
 
-  const { rows } = await db.query(
-    `SELECT a.surah_number, a.ayah_number, a.text_arabic, a.source_edition, at.text AS translation
-     FROM ayahs a
-     JOIN translations t ON t.code = $3
-     LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
-     WHERE a.surah_number = $1 AND a.ayah_number = $2`,
-    [surahNum, ayahNum, translationCode]
-  );
+  let rows;
+  if (translationCode) {
+    const r = await db.query(
+      `SELECT a.surah_number, a.ayah_number, a.text_arabic, a.source_edition, at.text AS translation
+       FROM ayahs a
+       JOIN translations t ON t.code = $3
+       LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
+       WHERE a.surah_number = $1 AND a.ayah_number = $2`,
+      [surahNum, ayahNum, translationCode]
+    );
+    rows = r.rows;
+  } else {
+    // language=ar — Arabic text only
+    const r = await db.query(
+      `SELECT a.surah_number, a.ayah_number, a.text_arabic, a.source_edition
+       FROM ayahs a
+       WHERE a.surah_number = $1 AND a.ayah_number = $2`,
+      [surahNum, ayahNum]
+    );
+    rows = r.rows;
+  }
 
   if (rows.length === 0) {
     return res.status(404).json({ error: 'Ayah not found' });
   }
+
+  rows[0].language = normalizeLanguage(req.query.language) || 'en';
+  if (translationCode) rows[0].translation_code = translationCode;
 
   await setCached(cacheKey, rows[0]);
   res.json(rows[0]);

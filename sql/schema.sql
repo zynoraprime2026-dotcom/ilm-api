@@ -80,12 +80,34 @@ CREATE TABLE IF NOT EXISTS hadiths (
     text_english TEXT NOT NULL,
     grade TEXT,                              -- e.g. 'Sahih', 'Hasan'
     source_edition TEXT DEFAULT 'fawazahmed0-hadith-api-v1',  -- which dataset/version this text came from
+    arabic_number TEXT,                       -- number in the Arabic edition (usually same as hadith_number)
+    book_number INTEGER,                      -- book/section number within the collection
+    book_name TEXT,                           -- English book/section name, e.g. 'Book of Revelation'
     UNIQUE(collection_id, hadith_number)
 );
 
 -- full text search index for hadith search endpoint
 CREATE INDEX IF NOT EXISTS idx_hadith_text_search
     ON hadiths USING GIN (to_tsvector('english', text_english));
+
+-- ---------- HADITH TRANSLATIONS (community languages) ----------
+-- Full-text translations of hadiths in additional languages (Bengali, French,
+-- Indonesian, Russian, Turkish, Urdu, Tamil). English/Arabic live on hadiths
+-- itself; every other language is one row here, searched via the ?language=
+-- query param on /v1/hadith/search.
+CREATE TABLE IF NOT EXISTS hadith_translations (
+    id SERIAL PRIMARY KEY,
+    hadith_id INTEGER NOT NULL REFERENCES hadiths(id) ON DELETE CASCADE,
+    language TEXT NOT NULL,                  -- ISO 639-2 style code: ben, fra, ind, rus, tur, urd, tam
+    text TEXT NOT NULL,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(hadith_id, language)
+);
+
+CREATE INDEX IF NOT EXISTS idx_hadith_translations_lang
+    ON hadith_translations(language);
+CREATE INDEX IF NOT EXISTS idx_hadith_translations_search
+    ON hadith_translations USING GIN (to_tsvector('simple', text));
 
 -- ---------- DUAS / FIQH ----------
 
