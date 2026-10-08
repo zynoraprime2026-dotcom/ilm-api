@@ -59,6 +59,7 @@
     <button class="tab" data-tab="duas">Du'as</button>
     <button class="tab" data-tab="fiqh">Fiqh</button>
     <button class="tab" data-tab="roots">Roots</button>
+    <button class="tab" data-tab="dictionary">Dictionary</button>
   </div>
 
   <div class="panel active" id="panel-quran">
@@ -224,6 +225,16 @@
       </div>
     </div>
     <div id="root-results"></div>
+  </div>
+  <div class="panel" id="panel-dictionary">
+    <div class="controls">
+      <div class="row">
+        <input id="dict-input" type="text" placeholder="Search a word or meaning: patience / صبر / ص-ب-ر" style="font-size: 16px;" />
+        <button id="dict-btn">Search</button>
+      </div>
+      <div class="note" style="margin-top:8px;">Type an English meaning, an Arabic word, or a 3-letter root. Tap a root to see every word built from it.</div>
+    </div>
+    <div id="dict-results"></div>
   </div>
 </div>
 
@@ -609,6 +620,57 @@ document.getElementById('root-btn').addEventListener('click', async () => {
         <div class="note">${escapeHtml(o.part_of_speech || '')}</div>
       </div>`).join('');
   } catch (err) { showError(el, err); }
+});
+
+// --- Dictionary ---
+function dictCard(e, showRoot = true) {
+  const rootBtn = (showRoot && e.root)
+    ? `<button class="small-btn dict-root" data-root="${escapeHtml(e.root)}" style="margin-top:8px;">Root: ${escapeHtml(e.root)} →</button>` : '';
+  return `<div class="card">
+    <span class="card-label">${escapeHtml((e.pos || 'word').toUpperCase())}</span>
+    <div class="arabic">${escapeHtml(e.word)}</div>
+    <div class="note">${escapeHtml(e.gloss_en || '')}</div>
+    ${rootBtn}
+  </div>`;
+}
+function bindDictRoots(el) {
+  el.querySelectorAll('.dict-root').forEach((b) => b.addEventListener('click', () => dictLookupRoot(b.dataset.root)));
+}
+async function dictLookupRoot(root) {
+  const el = document.getElementById('dict-results');
+  document.getElementById('dict-input').value = root;
+  el.innerHTML = '<div class="status">Loading root family…</div>';
+  try {
+    const d = await apiGet(`/v1/dictionary/root/${encodeURIComponent(root)}`);
+    const q = d.quranic || {};
+    const head = `<div class="card"><span class="card-label">ROOT</span><div class="arabic">${escapeHtml(d.root)}</div>
+      <div class="note">${escapeHtml(d.entry_count)} word(s)${q.occurrence_count ? ' · appears ' + escapeHtml(q.occurrence_count) + '× in the Quran' : ''}</div></div>`;
+    el.innerHTML = head + (d.entries || []).map((e) => dictCard(e, false)).join('');
+  } catch (err) { showError(el, err); }
+}
+async function dictSearch() {
+  const q = document.getElementById('dict-input').value.trim();
+  const el = document.getElementById('dict-results');
+  if (!q) { el.innerHTML = '<div class="error">Enter a word, meaning, or root</div>'; return; }
+  el.innerHTML = '<div class="status">Searching…</div>';
+  try {
+    const isArabic = /[\u0600-\u06FF]/.test(q);
+    const looksRoot = isArabic && /^[\u0600-\u06FF](\s*-\s*[\u0600-\u06FF]){1,3}$/.test(q);
+    if (looksRoot) { return dictLookupRoot(q.replace(/\s+/g, '')); }
+    const path = isArabic
+      ? `/v1/dictionary/word/${encodeURIComponent(q)}`
+      : `/v1/dictionary/search?q=${encodeURIComponent(q)}&limit=25`;
+    const d = await apiGet(path);
+    const list = d.entries || d.results || [];
+    if (list.length === 0) { el.innerHTML = '<div class="status">No matches. Try another spelling or an English meaning.</div>'; return; }
+    el.innerHTML = `<div class="note">${escapeHtml(list.length)} result(s)</div>` + list.map((e) => dictCard(e)).join('');
+    bindDictRoots(el);
+  } catch (err) { showError(el, err); }
+}
+document.getElementById('dict-btn').addEventListener('click', dictSearch);
+document.getElementById('dict-input').addEventListener('keydown', (e) => { if (e.key === 'Enter') dictSearch(); });
+document.getElementById('dict-results').addEventListener('click', (e) => {
+  const b = e.target.closest('.dict-root'); if (b) dictLookupRoot(b.dataset.root);
 });
 
 populateSurahSelect();
