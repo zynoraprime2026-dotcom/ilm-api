@@ -6,6 +6,14 @@ const requireTier = require('../middleware/requireTier');
 
 const { QURAN_TRANSLATIONS, normalizeLanguage } = require('../config/languages');
 
+// Guard numeric path params — a non-numeric :surah/:ayah must 400, never reach the DB as NaN.
+const numericParam = (req, res, next, val, name) => {
+  if (!/^\d+$/.test(val)) return res.status(400).json({ error: name + " must be a number" });
+  next();
+};
+router.param("surah", (req, res, next, val) => numericParam(req, res, next, val, "Surah"));
+router.param("ayah", (req, res, next, val) => numericParam(req, res, next, val, "Ayah"));
+
 // Resolve the effective translation code from ?translation= (explicit) or
 // ?language=xx (preferred translation for that language). Returns null for
 // language=ar (Arabic only, no translation join).
