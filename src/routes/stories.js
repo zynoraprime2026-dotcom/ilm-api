@@ -36,7 +36,7 @@ function storyOfTheDay(dateStr) {
 
 // GET /v1/stories — parts overview + compact index of all stories
 router.get('/', (req, res) => {
-  res.set('Cache-Control', `public, max-age=${DAY}`);
+  res.set('Cache-Control', `private, max-age=${DAY}`);
   res.json({
     count: stories.length,
     note: 'Islamic history in three parts: The Beginning (Allah\'s first creations through Adam), The Prophets (Adam to Muhammad ﷺ), and The End (signs of the Hour through the Hereafter).',
@@ -53,7 +53,7 @@ router.get('/', (req, res) => {
 
 // GET /v1/stories/parts — just the three parts
 router.get('/parts', (req, res) => {
-  res.set('Cache-Control', `public, max-age=${DAY}`);
+  res.set('Cache-Control', `private, max-age=${DAY}`);
   res.json(Object.entries(parts).map(([id, p]) => ({
     id,
     name_english: p.en,
@@ -72,7 +72,7 @@ router.get('/part/:partId', (req, res) => {
       valid_parts: Object.keys(parts),
     });
   }
-  res.set('Cache-Control', `public, max-age=${DAY}`);
+  res.set('Cache-Control', `private, max-age=${DAY}`);
   const ids = byPart[req.params.partId];
   res.json({
     part: req.params.partId,
@@ -86,7 +86,7 @@ router.get('/part/:partId', (req, res) => {
 
 // GET /v1/stories/daily — deterministic story of the day (UTC)
 router.get('/daily', (req, res) => {
-  res.set('Cache-Control', `public, max-age=${DAY}`);
+  res.set('Cache-Control', `private, max-age=${DAY}`);
   const dateStr = (req.query.date || new Date().toISOString().slice(0, 10));
   const s = storyOfTheDay(dateStr);
   res.json({ date: dateStr, story: serializeStory(s) });
@@ -113,7 +113,7 @@ router.get('/:id', (req, res) => {
       hint: 'GET /v1/stories for the full index',
     });
   }
-  res.set('Cache-Control', `public, max-age=${DAY}`);
+  res.set('Cache-Control', `private, max-age=${DAY}`);
   res.json(serializeStory(s));
 });
 
