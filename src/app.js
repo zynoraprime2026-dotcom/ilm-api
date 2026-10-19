@@ -11,6 +11,7 @@ const quranRoutes = require('./routes/quran');
 const hadithRoutes = require('./routes/hadith');
 const prayerTimesRoutes = require('./routes/prayerTimes');
 const duasRoutes = require('./routes/duas');
+const storiesRoutes = require('./routes/stories');
 const narratorsRoutes = require('./routes/narrators');
 const tafsirRoutes = require('./routes/tafsir');
 const rootsRoutes = require('./routes/roots');
@@ -154,7 +155,13 @@ app.get('/v1/meta', (req, res) => {
       'GET /v1/dictionary/search?q=',
       'GET /v1/dictionary/roots',
       'GET /v1/dictionary/root/:root',
-      'GET /v1/dictionary/word/:word',
+      'GET /v1/dictionary/word/:word',,
+      'GET /v1/stories',
+      'GET /v1/stories/parts',
+      'GET /v1/stories/part/:partId',
+      'GET /v1/stories/daily?date=',
+      'GET /v1/stories/random?part=',
+      'GET /v1/stories/:id',
     ],
   });
 });
@@ -183,6 +190,7 @@ app.use('/v1/fiqh', fiqhRoutes);
 app.use('/v1/reciters', reciterRoutes);
 app.use('/v1/duas', duasRoutes);
 app.use('/v1/narrators', narratorsRoutes);
+app.use('/v1/stories', storiesRoutes);
 const dictionaryRoutes = require('./routes/dictionary');
 app.use('/v1/dictionary', dictionaryRoutes);
 
