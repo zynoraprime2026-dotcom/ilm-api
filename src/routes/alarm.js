@@ -154,11 +154,11 @@ function tzParts(date, tz) {
 }
 
 async function sendPush(sub, prayer, vapid) {
-  webpush.setVapidDetails({
-    subject: 'mailto:salam@alhaqq-digital.vercel.app',
-    publicKey: vapid.public_key,
-    privateKey: vapid.private_key,
-  });
+  webpush.setVapidDetails(
+    'mailto:salam@alhaqq-digital.vercel.app',
+    vapid.public_key,
+    vapid.private_key
+  );
   const payload = JSON.stringify({
     prayer,
     title: `Ilm Daily — it is time for ${prayer.charAt(0).toUpperCase() + prayer.slice(1)}`,
