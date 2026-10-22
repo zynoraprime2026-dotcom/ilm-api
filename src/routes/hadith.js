@@ -263,6 +263,23 @@ router.get('/:collection/:number', async (req, res) => {
   if (rows.length === 0) return res.status(404).json({ error: 'Hadith not found' });
   const hadith = rows[0];
 
+  // Prev/next hadith in this collection (browse hadith-by-hadith)
+  try {
+    const nav = await db.query(
+      `SELECT
+         (SELECT h2.hadith_number FROM hadiths h2 WHERE h2.collection_id = h.collection_id AND h2.id < h.id ORDER BY h2.id DESC LIMIT 1) AS prev_number,
+         (SELECT h3.hadith_number FROM hadiths h3 WHERE h3.collection_id = h.collection_id AND h3.id > h.id ORDER BY h3.id ASC LIMIT 1) AS next_number
+       FROM hadiths h
+       JOIN hadith_collections c2 ON c2.id = h.collection_id
+       WHERE c2.slug = $1 AND h.hadith_number = $2`,
+      [collection, number]
+    );
+    if (nav.rows.length) {
+      hadith.prev_number = nav.rows[0].prev_number || null;
+      hadith.next_number = nav.rows[0].next_number || null;
+    }
+  } catch (e) { /* navigation optional */ }
+
   if (req.query.translations) {
     const tr = await db.query(
       `SELECT language, text FROM hadith_translations ht
