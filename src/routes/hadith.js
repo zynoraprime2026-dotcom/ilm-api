@@ -72,6 +72,7 @@ router.post('/admin/seed', requireTier('pro'), async (req, res) => {
     }
   }
 
+  try {
   const coll = await db.query(
     `INSERT INTO hadith_collections (slug, name, name_arabic, total_hadith)
      VALUES ($1, $2, $3, $4)
@@ -100,6 +101,10 @@ router.post('/admin/seed', requireTier('pro'), async (req, res) => {
      RETURNING id`
   );
   res.json({ collection: slug, inserted_or_updated: rows.length });
+  } catch (e) {
+    console.error('admin seed error:', e.message);
+    res.status(500).json({ error: 'Seed failed: ' + e.message });
+  }
 });
 
 // GET /v1/hadith/languages — every language this module can serve.
