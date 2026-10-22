@@ -178,14 +178,16 @@ router.get('/tick', async (req, res) => {
     let sent = 0, purged = 0, skipped = 0;
 
     if (req.query.test === '1') {
+      const errors = [];
       for (const sub of subs) {
         try { await sendPush(sub, 'test', vapid); sent++; }
         catch (e) {
           const status = e.statusCode || (e.body && e.body.statusCode);
+          errors.push({ id: sub.id, status: status || null, message: String(e.message || '').slice(0, 200) });
           if (status === 404 || status === 410) { await db.query('DELETE FROM alarm_push_subs WHERE id = $1', [sub.id]); purged++; }
         }
       }
-      return res.json({ ok: true, mode: 'test', checked: subs.length, sent, purged });
+      return res.json({ ok: true, mode: 'test', checked: subs.length, sent, purged, errors });
     }
 
     for (const sub of subs) {
