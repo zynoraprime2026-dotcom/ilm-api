@@ -60,7 +60,19 @@ router.get('/collections', async (req, res) => {
 //   { number, text_english, text_arabic?, narrator?, book_name? } ] } (max 500/request).
 // Remove this route once seeding is complete.
 router.post('/admin/seed', requireTier('pro'), async (req, res) => {
-  const { slug, name, name_arabic, total, hadiths } = req.body || {};
+  const { slug, name, name_arabic, total, hadiths, delete: delSlug } = req.body || {};
+  if (delSlug) {
+    try {
+      const idRow = await db.query('SELECT id FROM hadith_collections WHERE slug = $1', [delSlug]);
+      if (idRow.rows[0]) {
+        await db.query('DELETE FROM hadiths WHERE collection_id = $1', [idRow.rows[0].id]);
+        await db.query('DELETE FROM hadith_collections WHERE id = $1', [idRow.rows[0].id]);
+      }
+      return res.json({ deleted: delSlug });
+    } catch (e) {
+      return res.status(500).json({ error: 'Delete failed: ' + e.message });
+    }
+  }
   if (!slug || !name || !Array.isArray(hadiths) || hadiths.length === 0) {
     return res.status(400).json({ error: 'slug, name and a non-empty hadiths array are required' });
   }
@@ -98,7 +110,8 @@ router.post('/admin/seed', requireTier('pro'), async (req, res) => {
        text_arabic = EXCLUDED.text_arabic,
        narrator = EXCLUDED.narrator,
        book_name = EXCLUDED.book_name
-     RETURNING id`
+     RETURNING id`,
+    params
   );
   res.json({ collection: slug, inserted_or_updated: rows.length });
   } catch (e) {
