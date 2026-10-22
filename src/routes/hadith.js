@@ -54,6 +54,54 @@ router.get('/collections', async (req, res) => {
   res.json(rows);
 });
 
+
+// POST /v1/hadith/admin/seed — TEMPORARY bulk seeder for new collections.
+// Pro-tier key required. Body: { slug, name, name_arabic?, total, hadiths: [
+//   { number, text_english, text_arabic?, narrator?, book_name? } ] } (max 500/request).
+// Remove this route once seeding is complete.
+router.post('/admin/seed', requireTier('pro'), async (req, res) => {
+  const { slug, name, name_arabic, total, hadiths } = req.body || {};
+  if (!slug || !name || !Array.isArray(hadiths) || hadiths.length === 0) {
+    return res.status(400).json({ error: 'slug, name and a non-empty hadiths array are required' });
+  }
+  if (hadiths.length > 500) return res.status(400).json({ error: 'Max 500 hadiths per request' });
+  for (const h of hadiths) {
+    if (!h.number || !h.text_english) return res.status(400).json({ error: 'Each hadith needs number and text_english' });
+    if (String(h.text_english).length > 20000 || String(h.text_arabic || '').length > 20000) {
+      return res.status(400).json({ error: 'Hadith text exceeds 20k chars' });
+    }
+  }
+
+  const coll = await db.query(
+    `INSERT INTO hadith_collections (slug, name, name_arabic, total_hadith)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (slug) DO UPDATE SET name = EXCLUDED.name,
+       name_arabic = COALESCE(EXCLUDED.name_arabic, hadith_collections.name_arabic),
+       total_hadith = EXCLUDED.total_hadith
+     RETURNING id`,
+    [slug, name, name_arabic || null, total || hadiths.length]
+  );
+  const collectionId = coll.rows[0].id;
+
+  const params = [];
+  const values = hadiths.map((h, i) => {
+    const o = i * 6;
+    params.push(collectionId, String(h.number), h.text_english, h.text_arabic || null, h.narrator || null, h.book_name || null);
+    return `($${o+1},$${o+2},$${o+3},$${o+4},$${o+5},$${o+6},'ahmedbaset-hadith-json')`;
+  });
+  const { rows } = await db.query(
+    `INSERT INTO hadiths (collection_id, hadith_number, text_english, text_arabic, narrator, book_name, source_edition)
+     VALUES ${values.join(',')}
+     ON CONFLICT (collection_id, hadith_number) DO UPDATE SET
+       text_english = EXCLUDED.text_english,
+       text_arabic = EXCLUDED.text_arabic,
+       narrator = EXCLUDED.narrator,
+       book_name = EXCLUDED.book_name
+     RETURNING id`
+  );
+  res.json({ collection: slug, inserted_or_updated: rows.length });
+});
+
 // GET /v1/hadith/languages — every language this module can serve.
 // Arabic and English live on the hadiths table; the rest in hadith_translations.
 router.get('/languages', async (req, res) => {
