@@ -235,4 +235,18 @@ router.get('/tick', async (req, res) => {
   }
 });
 
+// Recent alarm activity — used to verify prayers actually fired
+router.get('/stats', async (req, res) => {
+  try {
+    await ensureSchema();
+    const { rows: fired } = await db.query(
+      'SELECT f.prayer, f.day, f.fired_at, s.timezone FROM alarm_push_fired f JOIN alarm_push_subs s ON s.id = f.sub_id ORDER BY f.fired_at DESC LIMIT 20'
+    );
+    const { rows: subs } = await db.query('SELECT count(*)::int AS c FROM alarm_push_subs');
+    res.json({ subscribers: subs[0].c, recently_fired: fired });
+  } catch (e) {
+    res.status(500).json({ error: 'Could not load alarm stats' });
+  }
+});
+
 module.exports = router;
