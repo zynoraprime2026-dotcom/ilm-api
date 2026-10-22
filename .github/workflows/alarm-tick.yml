@@ -1,0 +1,16 @@
+name: Salat alarm tick
+
+# Every 5 minutes, ask the Ilm API to dispatch push notifications for any
+# prayer that just became due. The endpoint is idempotent (fired-markers in
+# the DB), so a late or repeated tick is harmless. Public repo = free minutes.
+on:
+  schedule:
+    - cron: '*/5 * * * *'
+  workflow_dispatch:
+
+jobs:
+  tick:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping alarm tick endpoint
+        run: curl -fsS -m 45 "https://ilm-api.vercel.app/v1/alarm/tick" || true

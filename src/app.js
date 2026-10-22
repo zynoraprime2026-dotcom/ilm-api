@@ -10,6 +10,7 @@ const apiKeyAuth = require('./middleware/apiKeyAuth');
 const quranRoutes = require('./routes/quran');
 const hadithRoutes = require('./routes/hadith');
 const prayerTimesRoutes = require('./routes/prayerTimes');
+const alarmRoutes = require('./routes/alarm');
 const duasRoutes = require('./routes/duas');
 const storiesRoutes = require('./routes/stories');
 const narratorsRoutes = require('./routes/narrators');
@@ -178,6 +179,10 @@ app.use('/v1/developers', developersRoutes);
 // Prayer times are computed locally (no database) — free teaser endpoint,
 // mounted before the API key gate so developers can try it without a key.
 app.use('/v1/prayer-times', prayerTimesRoutes);
+
+// Salat alarm push — the tick + vapid endpoints stay open (an external
+// scheduler calls them; subscribe/unsubscribe apply apiKeyAuth themselves)
+app.use('/v1/alarm', alarmRoutes);
 
 // Everything else under /v1 requires a developer API key
 app.use('/v1', apiKeyAuth);
