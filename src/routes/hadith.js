@@ -48,6 +48,26 @@ function ensureArabicNames() {
   return arabicNamesReady;
 }
 
+// GET /v1/hadith/scholars — biographies of the collection compilers.
+router.get('/scholars', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  const SCHOLARS = require('../../data/hadith-scholars');
+  const collections = req.query.collections;
+  const list = collections
+    ? SCHOLARS.filter(s => s.collections.some(c => collections.split(',').includes(c)))
+    : SCHOLARS;
+  res.json({ count: list.length, scholars: list });
+});
+
+// GET /v1/hadith/scholars/:id — one compiler's biography.
+router.get('/scholars/:id', (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  const SCHOLARS = require('../../data/hadith-scholars');
+  const s = SCHOLARS.find(x => x.id === req.params.id);
+  if (!s) return res.status(404).json({ error: 'Scholar not found', available: SCHOLARS.map(x => x.id) });
+  res.json(s);
+});
+
 // GET /v1/hadith/collections — list available collections (Bukhari, Muslim, etc.)
 router.get('/collections', async (req, res) => {
   res.set('Cache-Control', 'private, max-age=86400');

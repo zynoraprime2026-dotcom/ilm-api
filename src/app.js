@@ -142,6 +142,8 @@ app.get('/v1/meta', (req, res) => {
       'GET /v1/fiqh/search?topic=',
       'GET /v1/fiqh/:id',
       'GET /v1/hadith/collections',
+      'GET /v1/hadith/scholars',
+      'GET /v1/hadith/scholars/:id',
       'GET /v1/hadith/export?collection= (academic/pro tier)',
       'GET /v1/hadith/search?q=&language=',
       'GET /v1/hadith/languages',
