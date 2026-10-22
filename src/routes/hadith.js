@@ -5,9 +5,51 @@ const { getCached, setCached } = require('../config/cache');
 const requireTier = require('../middleware/requireTier');
 const { LANGUAGES, HADITH_CODES, normalizeLanguage, stripArabicDiacritics } = require('../config/languages');
 
+// ---- Arabic book names (lazy migration) ----
+const ARABIC_NAMES = {
+  bukhari: 'صحيح البخاري',
+  muslim: 'صحيح مسلم',
+  nasai: 'سنن النسائي',
+  abudawud: 'سنن أبي داود',
+  tirmidhi: 'جامع الترمذي',
+  ibnmajah: 'سنن ابن ماجه',
+  malik: 'موطأ مالك',
+  ahmed: 'مسند أحمد',
+  nawawi: 'رياض الصالحين',
+  nawawi40: 'الأربعون النووية',
+  dehlawi: 'الأربعون العلوية',
+  shamail: 'الشميل المحمدية',
+  adab: 'الأدب المفرد',
+  bulugh: 'بلوغ المرام',
+  hisn: 'حصن المسلم',
+  qudsi: 'الأربعون القدسية',
+  muntazar: 'منتخب كنز العمال',
+  mishkat: 'مشكاة المصابيح',
+  miskkat: 'مشكاة المصابيح',
+  muslimsharif: 'صحيح مسلم الشريف',
+};
+let arabicNamesReady = null;
+function ensureArabicNames() {
+  if (!arabicNamesReady) {
+    arabicNamesReady = (async () => {
+      await db.query('ALTER TABLE hadith_collections ADD COLUMN IF NOT EXISTS name_arabic TEXT');
+      for (const [slug, name] of Object.entries(ARABIC_NAMES)) {
+        await db.query(
+          'UPDATE hadith_collections SET name_arabic = $2 WHERE slug = $1 AND (name_arabic IS NULL OR name_arabic = \'\')',
+          [slug, name]
+        );
+      }
+    })().catch((e) => { arabicNamesReady = null; throw e; });
+  }
+  return arabicNamesReady;
+}
+
 // GET /v1/hadith/collections — list available collections (Bukhari, Muslim, etc.)
 router.get('/collections', async (req, res) => {
   res.set('Cache-Control', 'private, max-age=86400');
+  try {
+    await ensureArabicNames();
+  } catch (e) { /* non-fatal: Arabic names optional */ }
   const { rows } = await db.query('SELECT * FROM hadith_collections ORDER BY name');
   res.json(rows);
 });
@@ -141,7 +183,7 @@ router.get('/:collection', async (req, res) => {
   }
   const lang = requested || 'en';
 
-  const collRows = await db.query('SELECT id, name, slug FROM hadith_collections WHERE slug = $1', [collection]);
+  const collRows = await db.query('SELECT id, name, slug, name_arabic FROM hadith_collections WHERE slug = $1', [collection]);
   if (collRows.rows.length === 0) return res.status(404).json({ error: 'Collection not found' });
   const coll = collRows.rows[0];
 
