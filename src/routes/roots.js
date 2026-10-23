@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const { requireTier } = require('../middleware/auth');
 const db = require('../config/db');
 const { getCached, setCached } = require('../config/cache');
 
@@ -36,6 +37,24 @@ router.get('/:root/occurrences', async (req, res) => {
   const payload = { root: rootArabic, count: rows.length, occurrences: rows };
   await setCached(cacheKey, payload);
   res.json(payload);
+});
+
+// TEMP admin endpoint: seed classical root meanings (remove after use)
+router.post('/admin/meanings', requireTier('pro'), async (req, res) => {
+  try {
+    const updates = (req.body && req.body.updates) || [];
+    if (!Array.isArray(updates) || updates.length === 0 || updates.length > 500) {
+      return res.status(400).json({ error: 'Send updates: [{root, meaning}] (max 500 per request)' });
+    }
+    let updated = 0;
+    for (const u of updates) {
+      const r = await db.query('UPDATE quranic_roots SET meaning = $2 WHERE root_arabic = $1', [u.root, String(u.meaning || '').slice(0, 3000)]);
+      updated += r.rowCount;
+    }
+    res.json({ ok: true, received: updates.length, updated });
+  } catch (e) {
+    res.status(500).json({ error: 'Meanings seed failed: ' + e.message });
+  }
 });
 
 module.exports = router;
