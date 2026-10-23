@@ -1,11 +1,21 @@
 name: Salat alarm tick
 
-# Every 5 minutes, ask the Ilm API to dispatch push notifications for any
-# prayer that just became due. The endpoint is idempotent (fired-markers in
-# the DB), so a late or repeated tick is harmless. Public repo = free minutes.
+# Pings the Ilm API to dispatch push notifications for any prayer that just
+# became due. The endpoint is idempotent (fired-markers in the DB), so late
+# or repeated ticks are harmless and the fire window (45 min) absorbs GitHub
+# schedule delays. GitHub heavily throttles every-5-minute schedules, so we
+# instead run exactly at Tarkwa prayer times (UTC = Africa/Accra, no offset)
+# plus an hourly catch-up so drifted/missed prayers still fire.
+# Prayer times drift ~1 min/week; the hourly catch-up covers the drift —
+# refresh the fixed times below every month or so.
 on:
   schedule:
-    - cron: '*/5 * * * *'
+    - cron: '43 4 * * *'   # Fajr  ~04:43
+    - cron: '53 11 * * *'  # Dhuhr ~11:53
+    - cron: '12 15 * * *'  # Asr   ~15:12
+    - cron: '52 17 * * *'  # Maghrib ~17:52
+    - cron: '58 18 * * *'  # Isha  ~18:58
+    - cron: '0 * * * *'    # hourly catch-up (fires any prayer within 45 min)
   workflow_dispatch:
 
 jobs:
@@ -14,5 +24,3 @@ jobs:
     steps:
       - name: Ping alarm tick endpoint
         run: curl -fsS -m 45 "https://ilm-api.vercel.app/v1/alarm/tick" || true
-
-# schedule registered 1792686686
