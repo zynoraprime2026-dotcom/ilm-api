@@ -19,8 +19,11 @@
   <p class="lede">
     Built for researchers, scholars, and students — Quran with 19 translations across 15 languages,
     word-by-word translation and grammar for every word in the Quran, tafsir,
-    all six canonical hadith collections, isnad chains, root-word morphology, thematic cross-references,
-    prayer times, and du'as. Free to start.
+    16 hadith collections with 47,000+ narrations (the six canonical books plus Muwatta Malik,
+    Musnad Ahmad, Riyad as-Salihin, Shamail, Al-Adab Al-Mufrad, Bulugh al-Maram, Mishkat al-Masabih
+    and the Forty collections), isnad chains, biographies of the compilers, root-word morphology,
+    thematic cross-references, prophetic stories, prayer times, du'as, and a salat alarm push service.
+    Free to start.
   </p>
 
   <a href="/read.html" style="display:inline-block;margin-bottom:28px;color:#C9A24B;font-size:15px;font-weight:500;">Try it — read the Quran and search Hadith right now &rarr;</a>
@@ -40,7 +43,7 @@
   </p>
   <p class="lede">
     <strong style="color:#F3ECDA;">Researchers</strong> get BibTeX/APA
-    citation export, bulk dataset downloads, full-text search across 34,000+
+    citation export, bulk dataset downloads, full-text search across 47,000+
     hadith, and narrator chains for authenticity verification.
   </p>
   <p class="lede">
@@ -89,9 +92,13 @@
   <h2>Hadith</h2>
   <table>
     <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
-    <tr><td>GET</td><td><code>/v1/hadith/collections</code></td><td>All six canonical collections</td></tr>
-    <tr><td>GET</td><td><code>/v1/hadith/search?q=</code></td><td>Full-text search</td></tr>
-    <tr><td>GET</td><td><code>/v1/hadith/:collection/:number</code></td><td>Single hadith</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/collections</code></td><td>16 collections — the six canonical books plus Muwatta Malik, Musnad Ahmad, Riyad as-Salihin, Shamail, Al-Adab Al-Mufrad, Bulugh al-Maram, Mishkat al-Masabih and the Forty collections, with Arabic names</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/:collection</code></td><td>Browse a collection with pagination (?page=&amp;limit=)</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/search?q=&amp;collection=&amp;language=</code></td><td>Full-text search across 47,000+ hadith, in 8 languages</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/languages</code></td><td>Community translations available per collection</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/scholars</code></td><td>Biographies of the compilers — lives, teachers, major works, linked collections</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/scholars/:id</code></td><td>One compiler's biography (e.g. <code>/scholars/bukhari</code>)</td></tr>
+    <tr><td>GET</td><td><code>/v1/hadith/:collection/:number</code></td><td>Single hadith with Arabic text and neighbouring numbers</td></tr>
     <tr><td>GET</td><td><code>/v1/hadith/:collection/:number/isnad</code></td><td>Narrator chain</td></tr>
     <tr><td>GET</td><td><code>/v1/hadith/:collection/:number/cite?format=</code></td><td>Citation export</td></tr>
     <tr><td>GET</td><td><code>/v1/hadith/export?collection=</code></td><td>Full collection dataset <span class="tier-badge">academic/pro</span></td></tr>
@@ -114,8 +121,37 @@
     <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
     <tr><td>GET</td><td><code>/v1/prayer-times?lat=&lng=&date=&method=</code></td><td>Computed, no external dependency</td></tr>
     <tr><td>GET</td><td><code>/v1/duas/categories</code></td><td>List du'a categories</td></tr>
-    <tr><td>GET</td><td><code>/v1/duas/:category</code></td><td>Du'as in a category</td></tr>
+    <tr><td>GET</td><td><code>/v1/duas/:category</code></td><td>Du'as in a category (137 categories)</td></tr>
+    <tr><td>GET</td><td><code>/v1/duas/search?q=</code></td><td>Search du'as</td></tr>
+    <tr><td>GET</td><td><code>/v1/duas/random</code></td><td>A random du'a</td></tr>
   </table>
+
+  <h2>Narrators &amp; Isnad</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
+    <tr><td>GET</td><td><code>/v1/narrators/search?q=</code></td><td>Search the narrator registry</td></tr>
+    <tr><td>GET</td><td><code>/v1/narrators/:id</code></td><td>Narrator profile</td></tr>
+    <tr><td>GET</td><td><code>/v1/narrators/:id/isnads</code></td><td>Chains a narrator appears in</td></tr>
+  </table>
+
+  <h2>Stories, Reciters &amp; Dictionary</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
+    <tr><td>GET</td><td><code>/v1/stories</code></td><td>Prophetic stories — parts, chapters, daily and random picks</td></tr>
+    <tr><td>GET</td><td><code>/v1/stories/part/:partId</code></td><td>All stories in a part, with chapters</td></tr>
+    <tr><td>GET</td><td><code>/v1/reciters</code></td><td>13 reciters with per-surah audio (incl. Islam Sobhi)</td></tr>
+    <tr><td>GET</td><td><code>/v1/dictionary/word/:word</code></td><td>Classical Arabic dictionary lookup</td></tr>
+    <tr><td>GET</td><td><code>/v1/dictionary/root/:root</code></td><td>Dictionary entries by Arabic root</td></tr>
+  </table>
+
+  <h2>Salat Alarm Push</h2>
+  <table>
+    <tr><th>Method</th><th>Path</th><th>Notes</th></tr>
+    <tr><td>POST</td><td><code>/v1/alarm/subscribe</code></td><td>Register a web-push subscription (lat, lng, prayers, adhan choice)</td></tr>
+    <tr><td>POST</td><td><code>/v1/alarm/unsubscribe</code></td><td>Remove a subscription</td></tr>
+    <tr><td>GET</td><td><code>/v1/alarm/vapid</code></td><td>Push public key</td></tr>
+  </table>
+  <p class="lede">Powers the Ilm Daily prayer app's phone alarm: subscribers receive an adhan notification at each prayer time, computed for their exact location, even with the app closed.</p>
 
   <h2>Personal Accounts</h2>
   <table>
