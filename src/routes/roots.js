@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { requireTier } = require('../middleware/auth');
+const requireTier = require('../middleware/requireTier');
 const db = require('../config/db');
 const { getCached, setCached } = require('../config/cache');
 
