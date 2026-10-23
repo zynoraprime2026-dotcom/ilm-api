@@ -678,7 +678,7 @@ document.getElementById('root-btn').addEventListener('click', async () => {
     if (!data.occurrences || data.occurrences.length === 0) { el.innerHTML = '<div class="status">No occurrences found for this root.</div>'; return; }
     let shown = 50;
     const drawOcc = () => {
-      el.innerHTML = `<div class="note">${escapeHtml(data.count)} occurrence(s) found${data.occurrences.length > shown ? ', showing the first ' + shown : ''}</div>` + data.occurrences.slice(0, shown).map((o) => `
+      el.innerHTML = `<div class="card"><span class="card-label">ROOT ${escapeHtml(data.root)}</span>${data.meaning ? `<div class="body-text">${escapeHtml(data.meaning)}</div>` : ''}</div><div class="note">${escapeHtml(data.count)} occurrence(s) found${data.occurrences.length > shown ? ', showing the first ' + shown : ''}</div>` + data.occurrences.slice(0, shown).map((o) => `
         <div class="card">
           <span class="card-label">SURAH ${escapeHtml(o.surah_number)} — AYAH ${escapeHtml(o.ayah_number)}</span>
           <div class="arabic">${escapeHtml(o.word)}</div>
@@ -714,6 +714,7 @@ async function dictLookupRoot(root) {
     const d = await apiGet(`/v1/dictionary/root/${encodeURIComponent(root)}`);
     const q = d.quranic || {};
     const head = `<div class="card"><span class="card-label">ROOT</span><div class="arabic">${escapeHtml(d.root)}</div>
+      ${q.meaning ? `<div class="body-text">${escapeHtml(q.meaning)}</div>` : ''}
       <div class="note">${escapeHtml(d.entry_count)} word(s)${q.occurrence_count ? ' · appears ' + escapeHtml(q.occurrence_count) + '× in the Quran' : ''}</div></div>`;
     el.innerHTML = head + (d.entries || []).map((e) => dictCard(e, false)).join('');
   } catch (err) { showError(el, err); }
@@ -874,7 +875,7 @@ document.getElementById('root-browse-btn').addEventListener('click', async () =>
     const draw = () => {
       el.innerHTML = `<div class="note">${allRoots.length} Quranic roots, most frequent first. Tap one to see every occurrence.</div>
         <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">` +
-        allRoots.slice(0, shown).map((r) => `<button class="small-btn root-pick" data-root="${escapeHtml(r.root_arabic)}" title="${escapeHtml(r.meaning || '')}"><span style="font-family:'Amiri',serif;font-size:17px;">${escapeHtml(r.root_arabic)}</span> <span style="opacity:.6">${escapeHtml(r.occurrence_count)}</span></button>`).join('') + '</div>' +
+        allRoots.slice(0, shown).map((r) => `<button class="small-btn root-pick" data-root="${escapeHtml(r.root_arabic)}" title="${escapeHtml(r.meaning || '')}" style="text-align:left;display:flex;flex-direction:column;align-items:flex-start;gap:2px;min-width:150px;"><span style="font-family:'Amiri',serif;font-size:17px;">${escapeHtml(r.root_arabic)} <span style="opacity:.6;font-family:inherit;">(${escapeHtml(r.occurrence_count)})</span></span><span style="font-size:10px;color:#8FA6A0;white-space:normal;">${escapeHtml(((r.meaning || 'root meaning not recorded').split(/[,.]/)[0]) + (r.meaning ? '…' : ''))}</span></button>`).join('') + '</div>' +
         (shown < allRoots.length ? `<div style="text-align:center;margin:14px;"><button class="small-btn" id="roots-more">Show more (${allRoots.length - shown} left)</button></div>` : '');
       el.querySelectorAll('.root-pick').forEach((b) => b.addEventListener('click', () => {
         document.getElementById('root-input').value = b.dataset.root;
