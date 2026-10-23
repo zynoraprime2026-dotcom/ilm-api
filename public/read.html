@@ -49,13 +49,16 @@
   <div class="nav-links"><a href="/prayer.html">Prayer times &amp; Qibla direction →</a></div>
   <div class="eyebrow">ILM API — READ</div>
   <h1>Read &amp; search Islamic knowledge</h1>
-  <p class="lede">No account or technical knowledge needed. Bilingual Arabic + English hadith, word-by-word Quran grammar, root-word search, and a classical books &amp; scholars registry (per-madhab study paths plus the evidence-first tradition) are all live.</p>
+  <p class="lede">No account or technical knowledge needed. 16 hadith collections with Arabic + English text, biographies of the hadith compilers, prophetic stories, word-by-word Quran grammar, root-word search, and a classical books &amp; scholars registry (per-madhab study paths plus the evidence-first tradition) are all live.</p>
 
   <div class="tabs">
     <button class="tab active" data-tab="quran">Quran</button>
     <button class="tab" data-tab="tafsir">Tafsir</button>
     <button class="tab" data-tab="hadith">Hadith</button>
     <button class="tab" data-tab="isnad">Isnad</button>
+    <button class="tab" data-tab="narrators">Narrators</button>
+    <button class="tab" data-tab="scholars">Scholars</button>
+    <button class="tab" data-tab="stories">Stories</button>
     <button class="tab" data-tab="duas">Du'as</button>
     <button class="tab" data-tab="fiqh">Fiqh</button>
     <button class="tab" data-tab="roots">Roots</button>
@@ -115,6 +118,10 @@
       <button id="tafsir-btn">Get Tafsir</button>
     </div>
     <div id="tafsir-results"></div>
+    <div id="tafsir-nav" style="display:none;justify-content:space-between;gap:8px;margin:12px 0;">
+      <button class="small-btn" id="tafsir-prev">&larr; Previous ayah</button>
+      <button class="small-btn" id="tafsir-next">Next ayah &rarr;</button>
+    </div>
   </div>
 
   <div class="panel" id="panel-hadith">
@@ -134,6 +141,7 @@
         </select>
         <input id="hadith-lookup-number" type="text" placeholder="Hadith # (e.g. 1)" />
         <button id="hadith-lookup-btn">Look Up</button>
+        <button id="hadith-browse-btn">Browse this book</button>
       </div>
     </div>
     <div id="hadith-results"></div>
@@ -157,12 +165,32 @@
     <div id="isnad-results"></div>
   </div>
 
+  <div class="panel" id="panel-narrators">
+    <p class="note" style="margin-bottom:14px;">Browse the narrator registry by generation, or search by name. Served by <code>GET /v1/narrators</code>.</p>
+    <div class="controls"><div class="row"><input id="narr-input" type="text" placeholder="Filter by name — e.g. Abu Hurairah" /><select id="narr-gen"><option value="">All generations</option></select></div></div>
+    <div id="narr-count" class="note"></div>
+    <div id="narr-results"><div class="status">Loading…</div></div>
+    <div id="narr-more" style="text-align:center;margin:14px;"></div>
+  </div>
+
+  <div class="panel" id="panel-scholars">
+    <p class="note" style="margin-bottom:14px;">The compilers behind the hadith collections: their lives, teachers and major works. Served by <code>GET /v1/hadith/scholars</code>.</p>
+    <div id="scholars-results"><div class="status">Loading…</div></div>
+  </div>
+
+  <div class="panel" id="panel-stories">
+    <p class="note" style="margin-bottom:14px;">Stories of the Prophets and the unseen, from the Beginning to the End, with Quran ayahs and hadith. Served by <code>GET /v1/stories</code>.</p>
+    <div class="controls"><div class="row"><select id="stories-part"></select><select id="stories-story"></select></div><button id="stories-btn">Read Story</button></div>
+    <div id="stories-results"></div>
+  </div>
+
   <div class="panel" id="panel-duas">
     <div class="controls">
       <div class="row">
         <select id="dua-category"></select>
       </div>
       <button id="dua-btn">Show Du'as</button>
+      <button id="dua-random-btn">Random du'a</button>
     </div>
     <div id="dua-results"></div>
   </div>
@@ -185,6 +213,7 @@
           <option value="">All chapters</option>
         </select>
         <button id="fiqh-btn">Compare Rulings</button>
+        <button id="fiqh-browse-btn">Browse all topics</button>
       </div>
     </div>
     <div id="fiqh-results"></div>
@@ -222,6 +251,7 @@
       <div class="row">
         <input id="root-input" type="text" placeholder="Arabic root — e.g. رحم" style="direction: rtl; text-align: right; font-family: 'Amiri', serif; font-size: 18px;" />
         <button id="root-btn">Find Occurrences</button>
+        <button id="root-browse-btn">Browse all roots</button>
       </div>
     </div>
     <div id="root-results"></div>
@@ -231,6 +261,7 @@
       <div class="row">
         <input id="dict-input" type="text" placeholder="Search a word or meaning: patience / صبر / ص-ب-ر" style="font-size: 16px;" />
         <button id="dict-btn">Search</button>
+        <button id="dict-browse-btn">Browse all roots</button>
       </div>
       <div class="note" style="margin-top:8px;">Type an English meaning, an Arabic word, or a 3-letter root. Tap a root to see every word built from it.</div>
     </div>
@@ -431,13 +462,30 @@ document.getElementById('tafsir-btn').addEventListener('click', async () => {
   el.innerHTML = '<div class="status">Loading…</div>';
   try {
     const data = await apiGet(`/v1/tafsir/${surah}/${ayah}`);
-    el.innerHTML = data.tafsir.map((t) => `
+    el.innerHTML = `<div class="note">Surah ${escapeHtml(surah)} — Ayah ${escapeHtml(ayah)}</div>` + data.tafsir.map((t) => `
       <div class="card">
         <span class="card-label">${escapeHtml(t.source.toUpperCase())}</span>
         <div class="body-text">${escapeHtml(t.text)}</div>
       </div>`).join('');
-  } catch (err) { showError(el, err); }
+    document.getElementById('tafsir-nav').style.display = 'flex';
+  } catch (err) { showError(el, err); document.getElementById('tafsir-nav').style.display = 'none'; }
 });
+// step through the Quran ayah by ayah (wraps to the next/previous surah)
+async function tafsirStep(dir) {
+  const sEl = document.getElementById('tafsir-surah'), aEl = document.getElementById('tafsir-ayah');
+  let s = Number(sEl.value), a = Number(aEl.value) + dir;
+  try {
+    const surahs = await apiGet('/v1/quran/surahs');
+    const list = Array.isArray(surahs) ? surahs : surahs.surahs;
+    const cur = list.find((x) => x.number === s);
+    if (a < 1) { if (s > 1) { s -= 1; a = list.find((x) => x.number === s).ayah_count; } else a = 1; }
+    else if (cur && a > cur.ayah_count) { if (s < 114) { s += 1; a = 1; } else a = cur.ayah_count; }
+  } catch (e) { if (a < 1) a = 1; }
+  sEl.value = s; aEl.value = a;
+  document.getElementById('tafsir-btn').click();
+}
+document.getElementById('tafsir-prev').addEventListener('click', () => tafsirStep(-1));
+document.getElementById('tafsir-next').addEventListener('click', () => tafsirStep(1));
 
 // --- Hadith search ---
 document.getElementById('hadith-search-btn').addEventListener('click', async () => {
@@ -523,6 +571,21 @@ document.getElementById('dua-btn').addEventListener('click', async () => {
         <div class="body-text">${escapeHtml(d.translation)}</div>
         ${d.reference ? `<div class="note">— ${escapeHtml(d.reference)}</div>` : ''}
       </div>`).join('');
+  } catch (err) { showError(el, err); }
+});
+
+document.getElementById('dua-random-btn').addEventListener('click', async () => {
+  const el = document.getElementById('dua-results');
+  el.innerHTML = '<div class="status">Loading…</div>';
+  try {
+    const d = await apiGet('/v1/duas/random');
+    el.innerHTML = `<div class="card">
+      <span class="card-label">RANDOM DU'A</span>
+      <div class="arabic">${escapeHtml(d.text_arabic)}</div>
+      ${d.transliteration ? `<div class="note">${escapeHtml(d.transliteration)}</div>` : ''}
+      <div class="body-text">${escapeHtml(d.translation || d.title || '')}</div>
+      ${d.reference ? `<div class="note">— ${escapeHtml(d.reference)}</div>` : ''}
+    </div>`;
   } catch (err) { showError(el, err); }
 });
 
@@ -673,7 +736,228 @@ document.getElementById('dict-results').addEventListener('click', (e) => {
   const b = e.target.closest('.dict-root'); if (b) dictLookupRoot(b.dataset.root);
 });
 
+// --- Hadith collections: fill both dropdowns from the API so new books appear automatically ---
+async function loadHadithCollections() {
+  try {
+    const cols = await apiGet('/v1/hadith/collections');
+    const order = ['bukhari','muslim','nasai','abudawud','tirmidhi','ibnmajah','malik','ahmed','riyad','shamail','adab','bulugh','mishkat','nawawi40','qudsi40','dehlawi40'];
+    cols.sort((a, b) => order.indexOf(a.slug) - order.indexOf(b.slug));
+    ['hadith-lookup-collection', 'isnad-collection'].forEach((id) => {
+      const sel = document.getElementById(id);
+      sel.innerHTML = '';
+      cols.forEach((c) => {
+        const opt = document.createElement('option');
+        opt.value = c.slug;
+        opt.textContent = `${c.name}${c.name_arabic ? ' — ' + c.name_arabic : ''} (${Number(c.total_hadith).toLocaleString()})`;
+        sel.appendChild(opt);
+      });
+    });
+  } catch (e) { /* keep the static fallback options */ }
+}
+
+// --- Scholars (compiler biographies) ---
+async function loadScholars() {
+  const el = document.getElementById('scholars-results');
+  try {
+    const data = await apiGet('/v1/hadith/scholars');
+    el.innerHTML = data.scholars.map((s) => `
+      <div class="card">
+        <span class="card-label">${escapeHtml(s.era)} — ${escapeHtml(s.home)}</span>
+        <div class="body-text"><strong style="color:#F3ECDA;">${escapeHtml(s.name)}</strong></div>
+        <div class="arabic" style="font-size:20px;margin-bottom:6px;">${escapeHtml(s.name_arabic)}</div>
+        <div class="body-text">${escapeHtml(s.biography)}</div>
+        <div class="note">Major works: ${escapeHtml(s.major_works)}</div>
+        <div class="note">Collections in this API: ${s.collections.map(escapeHtml).join(', ')}</div>
+      </div>`).join('');
+  } catch (err) { showError(el, err); }
+}
+
+// --- Stories ---
+let storiesIndex = null;
+async function loadStories() {
+  const partSel = document.getElementById('stories-part');
+  const storySel = document.getElementById('stories-story');
+  try {
+    storiesIndex = await apiGet('/v1/stories');
+    partSel.innerHTML = storiesIndex.parts.map((p) => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.name_english)}</option>`).join('');
+    const fill = () => {
+      const part = storiesIndex.parts.find((p) => p.id === partSel.value);
+      storySel.innerHTML = storiesIndex.stories.filter((s) => s.part === partSel.value)
+        .map((s) => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.order)}. ${escapeHtml(s.name_english)}</option>`).join('');
+      document.getElementById('stories-results').innerHTML = part ? `<div class="note">${escapeHtml(part.description)}</div>` : '';
+    };
+    partSel.addEventListener('change', fill);
+    fill();
+  } catch (err) { showError(document.getElementById('stories-results'), err); }
+}
+document.getElementById('stories-btn').addEventListener('click', async () => {
+  const el = document.getElementById('stories-results');
+  const id = document.getElementById('stories-story').value;
+  if (!id) return;
+  el.innerHTML = '<div class="status">Loading…</div>';
+  try {
+    const s = await apiGet(`/v1/stories/${encodeURIComponent(id)}`);
+    const ayat = (s.ayat || []).map((a) => `
+      <div class="card">
+        <span class="card-label">QURAN ${escapeHtml(a.surah || '')}:${escapeHtml(a.ayah || '')}</span>
+        ${a.arabic || a.text_arabic ? `<div class="arabic">${escapeHtml(a.arabic || a.text_arabic)}</div>` : ''}
+        <div class="body-text">${escapeHtml(a.translation || a.text_english || '')}</div>
+      </div>`).join('');
+    const hadith = (s.hadith || []).map((h) => `
+      <div class="card">
+        <span class="card-label">HADITH${h.src ? ' — ' + escapeHtml(h.src) : ''}${h.grade ? ' — ' + escapeHtml(h.grade) : ''}</span>
+        ${h.ar || h.arabic ? `<div class="arabic">${escapeHtml(h.ar || h.arabic)}</div>` : ''}
+        <div class="body-text">${escapeHtml(h.en || h.english || h.text || '')}</div>
+      </div>`).join('');
+    el.innerHTML = `
+      <div class="card">
+        <span class="card-label">${escapeHtml(s.era || '')}</span>
+        <div class="arabic" style="font-size:24px;">${escapeHtml(s.name_arabic || '')}</div>
+        <div class="body-text"><strong style="color:#F3ECDA;">${escapeHtml(s.name_english || '')}</strong> — ${escapeHtml(s.title_english || '')}</div>
+        ${s.summary ? `<div class="body-text" style="margin-top:8px;">${escapeHtml(s.summary)}</div>` : ''}
+      </div>${ayat}${hadith}`;
+  } catch (err) { showError(el, err); }
+});
+
+
+// ================= BROWSE MODES (everything can be browsed, not only searched) =================
+
+// --- Hadith: page through any book ---
+let hbState = { slug: null, page: 1 };
+async function hadithBrowse(slug, page) {
+  const el = document.getElementById('hadith-results');
+  el.innerHTML = '<div class="status">Loading…</div>';
+  hbState = { slug, page };
+  try {
+    const d = await apiGet(`/v1/hadith/${slug}?limit=20&page=${page}`);
+    const pager = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin:12px 0;gap:8px;">
+        <button class="small-btn" data-hp="${d.prev_page || ''}" ${d.has_prev ? '' : 'disabled'}>&larr; Prev</button>
+        <span class="note" style="margin:0;">${escapeHtml(d.collection.name)} — page ${d.page} of ${d.total_pages}</span>
+        <button class="small-btn" data-hp="${d.next_page || ''}" ${d.has_next ? '' : 'disabled'}>Next &rarr;</button>
+      </div>`;
+    el.innerHTML = pager + d.hadiths.map((h) => `
+      <div class="card">
+        <span class="card-label">${escapeHtml(slug.toUpperCase())} — #${escapeHtml(h.hadith_number)}${h.narrator ? ' — ' + escapeHtml(h.narrator) : ''}</span>
+        ${h.text_arabic ? `<div class="arabic">${escapeHtml(h.text_arabic)}</div>` : ''}
+        <div class="body-text">${escapeHtml(h.text_english)}</div>
+        ${h.book_name ? `<div class="note">${escapeHtml(h.book_name)}</div>` : ''}
+      </div>`).join('') + pager;
+    el.querySelectorAll('[data-hp]').forEach((b) => b.addEventListener('click', () => {
+      if (b.dataset.hp) { hadithBrowse(slug, Number(b.dataset.hp)); window.scrollTo({ top: 0, behavior: 'smooth' }); }
+    }));
+  } catch (err) { showError(el, err); }
+}
+document.getElementById('hadith-browse-btn').addEventListener('click', () => {
+  const slug = document.getElementById('hadith-lookup-collection').value;
+  const num = document.getElementById('hadith-lookup-number').value.trim();
+  hadithBrowse(slug, /^\d+$/.test(num) && Number(num) > 0 ? Math.ceil(Number(num) / 20) : 1);
+});
+
+// --- Quran roots: full browsable list ---
+let allRoots = null;
+document.getElementById('root-browse-btn').addEventListener('click', async () => {
+  const el = document.getElementById('root-results');
+  el.innerHTML = '<div class="status">Loading roots…</div>';
+  try {
+    allRoots = allRoots || await apiGet('/v1/roots');
+    el.innerHTML = `<div class="note">${allRoots.length} Quranic roots — tap one to see every occurrence</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">` +
+      allRoots.map((r) => `<button class="small-btn root-pick" data-root="${escapeHtml(r.root_arabic)}" title="${escapeHtml(r.meaning || '')}"><span style="font-family:'Amiri',serif;font-size:17px;">${escapeHtml(r.root_arabic)}</span> <span style="opacity:.6">${escapeHtml(r.occurrence_count)}</span></button>`).join('') + '</div>';
+    el.querySelectorAll('.root-pick').forEach((b) => b.addEventListener('click', () => {
+      document.getElementById('root-input').value = b.dataset.root;
+      document.getElementById('root-btn').click();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }));
+  } catch (err) { showError(el, err); }
+});
+
+// --- Dictionary: browse every root ---
+document.getElementById('dict-browse-btn').addEventListener('click', async () => {
+  const el = document.getElementById('dict-results');
+  el.innerHTML = '<div class="status">Loading roots…</div>';
+  try {
+    const d = await apiGet('/v1/dictionary/roots');
+    el.innerHTML = `<div class="note">${d.roots.length} roots in the dictionary — tap one to see every word built from it</div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">` +
+      d.roots.map((r) => `<button class="small-btn dict-root" data-root="${escapeHtml(r.root)}"><span style="font-family:'Amiri',serif;font-size:17px;">${escapeHtml(r.root)}</span> <span style="opacity:.6">${escapeHtml(r.entry_count)}</span></button>`).join('') + '</div>';
+  } catch (err) { showError(el, err); }
+});
+
+// --- Fiqh: browse every topic, grouped by chapter ---
+document.getElementById('fiqh-browse-btn').addEventListener('click', async () => {
+  const el = document.getElementById('fiqh-results');
+  el.innerHTML = '<div class="status">Loading topics…</div>';
+  try {
+    const d = await apiGet('/v1/fiqh/topics');
+    const byChapter = {};
+    d.topics.forEach((t) => { (byChapter[t.chapter] = byChapter[t.chapter] || []).push(t); });
+    el.innerHTML = `<div class="note">${d.topics.length} topics across ${Object.keys(byChapter).length} chapters — tap one to compare the four madhabs</div>` +
+      Object.entries(byChapter).map(([ch, ts]) => `
+        <div class="card"><span class="card-label">${escapeHtml(ch.toUpperCase())}</span>
+        ${ts.map((t) => `<button class="small-btn fiqh-pick" data-topic="${escapeHtml(t.topic)}" style="display:block;margin:6px 0;text-align:left;">${escapeHtml(t.topic)} <span style="opacity:.6">— ${escapeHtml(t.question)}</span></button>`).join('')}</div>`).join('');
+    el.querySelectorAll('.fiqh-pick').forEach((b) => b.addEventListener('click', () => {
+      document.getElementById('fiqh-topic').value = b.dataset.topic;
+      document.getElementById('fiqh-btn').click();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }));
+  } catch (err) { showError(el, err); }
+});
+
+// --- Narrators: browse all, filter by name/generation, load more ---
+let allNarrators = null, narrShown = 0;
+const NARR_PAGE = 40;
+function narrFiltered() {
+  const q = document.getElementById('narr-input').value.trim().toLowerCase();
+  const g = document.getElementById('narr-gen').value;
+  return allNarrators.filter((n) =>
+    (!g || n.generation === g) &&
+    (!q || (n.name_english || '').toLowerCase().includes(q) || (n.name_arabic || '').includes(q) || (n.kunya || '').toLowerCase().includes(q)));
+}
+function narrRender(reset) {
+  const list = narrFiltered();
+  const el = document.getElementById('narr-results');
+  if (reset) narrShown = 0;
+  const slice = list.slice(0, narrShown + NARR_PAGE);
+  narrShown = slice.length;
+  document.getElementById('narr-count').textContent = `${list.length} narrator(s)`;
+  el.innerHTML = slice.map((n) => `
+    <div class="card">
+      <span class="card-label">${escapeHtml((n.generation || '').toUpperCase())}${n.death_year_hijri ? ' — d. ' + escapeHtml(n.death_year_hijri) + ' AH' : ''}${n.reliability_grade ? ' — ' + escapeHtml(n.reliability_grade) : ''}</span>
+      <div class="body-text"><strong style="color:#F3ECDA;">${escapeHtml(n.name_english)}</strong>${n.kunya && n.kunya !== n.name_english ? ' (' + escapeHtml(n.kunya) + ')' : ''}</div>
+      ${n.name_arabic ? `<div class="arabic" style="font-size:19px;margin:4px 0 0;">${escapeHtml(n.name_arabic)}</div>` : ''}
+      <div class="note">Appears in ${escapeHtml(n.isnad_appearances)} narrator chain(s)</div>
+    </div>`).join('') || '<div class="status">No narrators match.</div>';
+  document.getElementById('narr-more').innerHTML = slice.length < list.length
+    ? `<button class="small-btn" id="narr-more-btn">Show more (${list.length - slice.length} left)</button>` : '';
+  const mb = document.getElementById('narr-more-btn');
+  if (mb) mb.addEventListener('click', () => narrRender(false));
+}
+async function loadNarrators() {
+  const el = document.getElementById('narr-results');
+  try {
+    const d = await apiGet('/v1/narrators');
+    allNarrators = d.narrators;
+    const gens = [...new Set(allNarrators.map((n) => n.generation).filter(Boolean))];
+    const sel = document.getElementById('narr-gen');
+    gens.forEach((g) => { const o = document.createElement('option'); o.value = g; o.textContent = g; sel.appendChild(o); });
+    sel.addEventListener('change', () => narrRender(true));
+    document.getElementById('narr-input').addEventListener('input', () => narrRender(true));
+    narrRender(true);
+  } catch (err) { showError(el, err); }
+}
+
+// load scholars/stories lazily the first time their tab opens
+document.querySelectorAll('.tab').forEach((tab) => {
+  tab.addEventListener('click', () => {
+    if (tab.dataset.tab === 'scholars' && !tab.dataset.loaded) { tab.dataset.loaded = '1'; loadScholars(); }
+    if (tab.dataset.tab === 'stories' && !tab.dataset.loaded) { tab.dataset.loaded = '1'; loadStories(); }
+    if (tab.dataset.tab === 'narrators' && !tab.dataset.loaded) { tab.dataset.loaded = '1'; loadNarrators(); }
+  });
+});
+
 populateSurahSelect();
+loadHadithCollections();
 loadDuaCategories();
 loadFiqhChapters();
 loadReciters();
