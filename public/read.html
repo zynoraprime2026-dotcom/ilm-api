@@ -676,12 +676,19 @@ document.getElementById('root-btn').addEventListener('click', async () => {
   try {
     const data = await apiGet(`/v1/roots/${encodeURIComponent(root)}/occurrences`);
     if (!data.occurrences || data.occurrences.length === 0) { el.innerHTML = '<div class="status">No occurrences found for this root.</div>'; return; }
-    el.innerHTML = `<div class="note">${escapeHtml(data.count)} occurrence(s) found</div>` + data.occurrences.map((o) => `
-      <div class="card">
-        <span class="card-label">SURAH ${escapeHtml(o.surah_number)} — AYAH ${escapeHtml(o.ayah_number)}</span>
-        <div class="arabic">${escapeHtml(o.word)}</div>
-        <div class="note">${escapeHtml(o.part_of_speech || '')}</div>
-      </div>`).join('');
+    let shown = 50;
+    const drawOcc = () => {
+      el.innerHTML = `<div class="note">${escapeHtml(data.count)} occurrence(s) found${data.occurrences.length > shown ? ', showing the first ' + shown : ''}</div>` + data.occurrences.slice(0, shown).map((o) => `
+        <div class="card">
+          <span class="card-label">SURAH ${escapeHtml(o.surah_number)} — AYAH ${escapeHtml(o.ayah_number)}</span>
+          <div class="arabic">${escapeHtml(o.word)}</div>
+          <div class="note">${escapeHtml(o.part_of_speech || '')}</div>
+        </div>`).join('') +
+        (shown < data.occurrences.length ? `<div style="text-align:center;margin:14px;"><button class="small-btn" id="occ-more">Show more (${data.occurrences.length - shown} left)</button></div>` : '');
+      const more = document.getElementById('occ-more');
+      if (more) more.addEventListener('click', () => { shown += 100; drawOcc(); });
+    };
+    drawOcc();
   } catch (err) { showError(el, err); }
 });
 
