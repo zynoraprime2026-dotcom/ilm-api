@@ -185,4 +185,38 @@ router.get('/audio', async (req, res) => {
   }
 });
 
+
+// GET /v1/dictionary/words?letter=ك&limit=50&offset=0
+// Alif-to-yaa browsing: dictionary words starting with a given Arabic
+// letter, paginated. Hamza-on-alif forms (أ إ آ) group under plain alif.
+router.get('/words', async (req, res) => {
+  const letter = String(req.query.letter || '').trim().slice(0, 2);
+  if (!/[\u0600-\u06FF]/.test(letter)) {
+    return res.status(400).json({ error: 'Query param "letter" (a single Arabic letter) is required' });
+  }
+  const capped = Math.min(parseInt(req.query.limit, 10) || 50, 200);
+  const offset = Math.max(parseInt(req.query.offset, 10) || 0, 0);
+  const chars = letter === '\u0627' ? '\u0627\u0623\u0625\u0622\u0671' : letter;
+  const regex = '^[' + chars + ']';
+
+  const { rows } = await db.query(
+    `SELECT word, root, pos, gloss_en FROM dictionary_words
+     WHERE word_plain ~ $1
+     ORDER BY word_plain, word
+     LIMIT $2 OFFSET $3`,
+    [regex, capped, offset]
+  );
+  const cnt = await db.query(
+    'SELECT count(*) AS total FROM dictionary_words WHERE word_plain ~ $1',
+    [regex]
+  );
+  res.json({
+    letter,
+    offset,
+    count: rows.length,
+    total: parseInt(cnt.rows[0].total, 10),
+    words: rows,
+  });
+});
+
 module.exports = router;
