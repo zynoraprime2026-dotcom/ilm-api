@@ -99,6 +99,7 @@ router.post('/subscribe', apiKeyAuth, async (req, res) => {
     if (!METHODS[methodName]) methodName = 'MuslimWorldLeague';
     const sel = {};
     for (const p of PRAYERS) sel[p] = !prayers || prayers[p] === undefined ? true : !!prayers[p];
+  sel.daily = !prayers || prayers.daily === undefined ? true : !!prayers.daily;
     const tz = (timezone && /^[A-Za-z0-9_+/\-]+$/.test(timezone)) ? timezone : 'UTC';
 
     await ensureSchema();
@@ -130,6 +131,35 @@ router.post('/unsubscribe', apiKeyAuth, async (req, res) => {
   }
 });
 
+// ---- deterministic 'verse & hadith of the day' ----
+async function dailyBody(day) {
+  const epochDay = Math.floor(Date.parse(day + 'T00:00:00Z') / 86400000);
+  const clip = (s, n) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const ayah = await db.query(
+    `SELECT a.surah_number, a.ayah_number, at.text AS translation
+     FROM ayahs a
+     JOIN translations t ON t.code = 'en.sahih'
+     LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
+     ORDER BY a.id
+     LIMIT 1 OFFSET $1`,
+    [epochDay % 6236]
+  );
+  const hadith = await db.query(
+    `SELECT h.hadith_number, h.text_english FROM hadiths h
+     JOIN hadith_collections c ON c.id = h.collection_id
+     WHERE c.slug = 'riyad' AND h.text_english IS NOT NULL AND h.text_english <> ''
+     ORDER BY h.id LIMIT 1 OFFSET $1`,
+    [epochDay % 1896]
+  );
+  const a = ayah.rows[0];
+  const h = hadith.rows[0];
+  const parts = [];
+  if (a) parts.push(`"${clip(a.translation, 200)}" — Quran ${a.surah_number}:${a.ayah_number}`);
+  if (h) parts.push(`Hadith: ${clip(h.text_english, 170)} (Riyad as-Salihin ${h.hadith_number})`);
+  if (!parts.length) parts.push('Open Ilm Daily for today\'s verse, hadith and prayer times.');
+  return parts.join('\n\n');
+}
+
 // ---- the tick: fire pushes for any prayer that just became due ----
 // GitHub Actions hits this every 5 minutes; a catch-up window means a late
 // tick still rings, and the fired-marker makes repeats harmless.
@@ -153,7 +183,7 @@ function tzParts(date, tz) {
   }
 }
 
-async function sendPush(sub, prayer, vapid) {
+async function sendPush(sub, prayer, vapid, extra = {}) {
   webpush.setVapidDetails(
     'mailto:salam@alhaqq-digital.vercel.app',
     vapid.public_key,
@@ -161,7 +191,8 @@ async function sendPush(sub, prayer, vapid) {
   );
   const payload = JSON.stringify({
     prayer,
-    title: `Ilm Daily — it is time for ${prayer.charAt(0).toUpperCase() + prayer.slice(1)}`,
+    title: extra.title || `Ilm Daily — it is time for ${prayer.charAt(0).toUpperCase() + prayer.slice(1)}`,
+    body: extra.body || undefined,
   });
   return webpush.sendNotification(
     { endpoint: sub.endpoint, keys: { p256dh: sub.p256dh, auth: sub.auth } },
@@ -225,6 +256,34 @@ router.get('/tick', async (req, res) => {
           }
           // other errors: retry on the next tick within the window
           await db.query('DELETE FROM alarm_push_fired WHERE sub_id = $1 AND day = $2 AND prayer = $3', [sub.id, here.day, prayer]);
+        }
+      }
+      // ---- daily verse & hadith, ~07:00 each morning (opt-out via prayers.daily) ----
+      if (sel.daily !== false) {
+        const target = 7 * 60; // 07:00 local
+        const dDiff = here.minutes - target;
+        if (dDiff >= 0 && dDiff <= FIRE_WINDOW_MIN) {
+          const ins = await db.query(
+            "INSERT INTO alarm_push_fired (sub_id, day, prayer) VALUES ($1, $2, 'daily') ON CONFLICT DO NOTHING",
+            [sub.id, here.day]
+          );
+          if (ins.rowCount > 0) {
+            try {
+              const body = await dailyBody(here.day);
+              await sendPush(sub, 'daily', vapid, {
+                title: 'Ilm Daily — verse & hadith of the day',
+                body,
+              });
+              sent++;
+            } catch (e) {
+              const status = e.statusCode || (e.body && e.body.statusCode);
+              if (status === 404 || status === 410) {
+                await db.query('DELETE FROM alarm_push_subs WHERE id = $1', [sub.id]);
+                purged++;
+              }
+              await db.query("DELETE FROM alarm_push_fired WHERE sub_id = $1 AND day = $2 AND prayer = 'daily'", [sub.id, here.day]);
+            }
+          }
         }
       }
     }
