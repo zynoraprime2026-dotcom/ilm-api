@@ -799,22 +799,24 @@ document.getElementById('stories-btn').addEventListener('click', async () => {
     const s = await apiGet(`/v1/stories/${encodeURIComponent(id)}`);
     const ayat = (s.ayat || []).map((a) => `
       <div class="card">
-        <span class="card-label">QURAN ${escapeHtml(a.surah || '')}:${escapeHtml(a.ayah || '')}</span>
-        ${a.arabic || a.text_arabic ? `<div class="arabic">${escapeHtml(a.arabic || a.text_arabic)}</div>` : ''}
-        <div class="body-text">${escapeHtml(a.translation || a.text_english || '')}</div>
+        <span class="card-label">QURAN ${escapeHtml(a.reference || '')}</span>
+        ${a.text_arabic ? `<div class="arabic">${escapeHtml(a.text_arabic)}</div>` : ''}
+        <div class="body-text">${escapeHtml(a.translation || '')}</div>
+        ${a.translation_source ? `<div class="note">${escapeHtml(a.translation_source)}</div>` : ''}
       </div>`).join('');
     const hadith = (s.hadith || []).map((h) => `
       <div class="card">
-        <span class="card-label">HADITH${h.src ? ' — ' + escapeHtml(h.src) : ''}${h.grade ? ' — ' + escapeHtml(h.grade) : ''}</span>
-        ${h.ar || h.arabic ? `<div class="arabic">${escapeHtml(h.ar || h.arabic)}</div>` : ''}
-        <div class="body-text">${escapeHtml(h.en || h.english || h.text || '')}</div>
+        <span class="card-label">HADITH${h.source ? ' — ' + escapeHtml(h.source) : ''}${h.grade ? ' — ' + escapeHtml(h.grade) : ''}</span>
+        ${h.text_arabic ? `<div class="arabic">${escapeHtml(h.text_arabic)}</div>` : ''}
+        <div class="body-text">${escapeHtml(h.text_english || '')}</div>
       </div>`).join('');
+    const paras = Array.isArray(s.summary) ? s.summary : (s.summary ? [s.summary] : []);
     el.innerHTML = `
       <div class="card">
-        <span class="card-label">${escapeHtml(s.era || '')}</span>
+        <span class="card-label">${escapeHtml(s.part_name || '')}${s.era ? ' — ' + escapeHtml(s.era) : ''}</span>
         <div class="arabic" style="font-size:24px;">${escapeHtml(s.name_arabic || '')}</div>
         <div class="body-text"><strong style="color:#F3ECDA;">${escapeHtml(s.name_english || '')}</strong> — ${escapeHtml(s.title_english || '')}</div>
-        ${s.summary ? `<div class="body-text" style="margin-top:8px;">${escapeHtml(s.summary)}</div>` : ''}
+        ${paras.map((p) => `<div class="body-text" style="margin-top:10px;">${escapeHtml(p)}</div>`).join('')}
       </div>${ayat}${hadith}`;
   } catch (err) { showError(el, err); }
 });
@@ -861,14 +863,21 @@ document.getElementById('root-browse-btn').addEventListener('click', async () =>
   el.innerHTML = '<div class="status">Loading roots…</div>';
   try {
     allRoots = allRoots || await apiGet('/v1/roots');
-    el.innerHTML = `<div class="note">${allRoots.length} Quranic roots — tap one to see every occurrence</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">` +
-      allRoots.map((r) => `<button class="small-btn root-pick" data-root="${escapeHtml(r.root_arabic)}" title="${escapeHtml(r.meaning || '')}"><span style="font-family:'Amiri',serif;font-size:17px;">${escapeHtml(r.root_arabic)}</span> <span style="opacity:.6">${escapeHtml(r.occurrence_count)}</span></button>`).join('') + '</div>';
-    el.querySelectorAll('.root-pick').forEach((b) => b.addEventListener('click', () => {
-      document.getElementById('root-input').value = b.dataset.root;
-      document.getElementById('root-btn').click();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    }));
+    let shown = 150;
+    const draw = () => {
+      el.innerHTML = `<div class="note">${allRoots.length} Quranic roots, most frequent first. Tap one to see every occurrence.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">` +
+        allRoots.slice(0, shown).map((r) => `<button class="small-btn root-pick" data-root="${escapeHtml(r.root_arabic)}" title="${escapeHtml(r.meaning || '')}"><span style="font-family:'Amiri',serif;font-size:17px;">${escapeHtml(r.root_arabic)}</span> <span style="opacity:.6">${escapeHtml(r.occurrence_count)}</span></button>`).join('') + '</div>' +
+        (shown < allRoots.length ? `<div style="text-align:center;margin:14px;"><button class="small-btn" id="roots-more">Show more (${allRoots.length - shown} left)</button></div>` : '');
+      el.querySelectorAll('.root-pick').forEach((b) => b.addEventListener('click', () => {
+        document.getElementById('root-input').value = b.dataset.root;
+        document.getElementById('root-btn').click();
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }));
+      const more = document.getElementById('roots-more');
+      if (more) more.addEventListener('click', () => { shown += 300; draw(); });
+    };
+    draw();
   } catch (err) { showError(el, err); }
 });
 
@@ -878,9 +887,16 @@ document.getElementById('dict-browse-btn').addEventListener('click', async () =>
   el.innerHTML = '<div class="status">Loading roots…</div>';
   try {
     const d = await apiGet('/v1/dictionary/roots');
-    el.innerHTML = `<div class="note">${d.roots.length} roots in the dictionary — tap one to see every word built from it</div>
-      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">` +
-      d.roots.map((r) => `<button class="small-btn dict-root" data-root="${escapeHtml(r.root)}"><span style="font-family:'Amiri',serif;font-size:17px;">${escapeHtml(r.root)}</span> <span style="opacity:.6">${escapeHtml(r.entry_count)}</span></button>`).join('') + '</div>';
+    let shown = 150;
+    const draw = () => {
+      el.innerHTML = `<div class="note">${d.roots.length} roots in the dictionary, richest first. Tap one to see every word built from it.</div>
+        <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;">` +
+        d.roots.slice(0, shown).map((r) => `<button class="small-btn dict-root" data-root="${escapeHtml(r.root)}"><span style="font-family:'Amiri',serif;font-size:17px;">${escapeHtml(r.root)}</span> <span style="opacity:.6">${escapeHtml(r.entry_count)}</span></button>`).join('') + '</div>' +
+        (shown < d.roots.length ? `<div style="text-align:center;margin:14px;"><button class="small-btn" id="dict-more">Show more (${d.roots.length - shown} left)</button></div>` : '');
+      const more = document.getElementById('dict-more');
+      if (more) more.addEventListener('click', () => { shown += 300; draw(); });
+    };
+    draw();
   } catch (err) { showError(el, err); }
 });
 
