@@ -54,6 +54,8 @@ app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 
 // Public health check — no API key needed
+app.get('/read', (req, res) => res.redirect('/read.html'));
+app.get('/docs', (req, res) => res.redirect('/'));
 app.get('/health', (req, res) => res.json({ status: 'ok', service: 'ilm-api' }));
 
 // GET /v1/version — for researchers who need to cite a stable API version
