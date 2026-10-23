@@ -143,4 +143,46 @@ router.get('/word/:word', async (req, res) => {
   });
 });
 
+
+// GET /v1/dictionary/audio?word=عِلْم — spoken pronunciation (MP3) for a
+// dictionary word. Proxies a public Arabic TTS, caches buffers in memory so
+// repeat listens are instant, and sets long-lived browser caching headers.
+const AUDIO_CACHE = new Map(); // word -> Buffer, capped below
+const AUDIO_CACHE_MAX = 500;
+
+router.get('/audio', async (req, res) => {
+  const word = String(req.query.word || '').trim().slice(0, 200);
+  if (!word || !/[\u0600-\u06FFa-zA-Z]/.test(word)) {
+    return res.status(400).json({ error: 'Query param "word" is required' });
+  }
+  const key = word.replace(/\s+/g, ' ');
+
+  if (AUDIO_CACHE.has(key)) {
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Cache-Control', 'public, max-age=2592000');
+    return res.send(AUDIO_CACHE.get(key));
+  }
+
+  try {
+    const tts = await fetch(
+      'https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=ar&ttsspeed=0.8&q=' + encodeURIComponent(key),
+      { headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36' } }
+    );
+    if (!tts.ok) throw new Error('TTS upstream returned ' + tts.status);
+    const buf = Buffer.from(await tts.arrayBuffer());
+    if (!buf || buf.length < 200) throw new Error('TTS upstream returned empty audio');
+
+    if (AUDIO_CACHE.size >= AUDIO_CACHE_MAX) {
+      AUDIO_CACHE.delete(AUDIO_CACHE.keys().next().value); // simple FIFO eviction
+    }
+    AUDIO_CACHE.set(key, buf);
+
+    res.set('Content-Type', 'audio/mpeg');
+    res.set('Cache-Control', 'public, max-age=2592000');
+    return res.send(buf);
+  } catch (err) {
+    return res.status(502).json({ error: 'Audio unavailable: ' + err.message });
+  }
+});
+
 module.exports = router;
