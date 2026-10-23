@@ -2,7 +2,7 @@ name: Salat alarm tick
 
 # Pings the Ilm API to dispatch push notifications for any prayer that just
 # became due. The endpoint is idempotent (fired-markers in the DB), so late
-# or repeated ticks are harmless and the fire window (45 min) absorbs GitHub
+# or repeated ticks are harmless and the fire window (90 min) absorbs GitHub
 # schedule delays. GitHub heavily throttles every-5-minute schedules, so we
 # instead run exactly at Tarkwa prayer times (UTC = Africa/Accra, no offset)
 # plus an hourly catch-up so drifted/missed prayers still fire.

@@ -133,7 +133,7 @@ router.post('/unsubscribe', apiKeyAuth, async (req, res) => {
 // ---- the tick: fire pushes for any prayer that just became due ----
 // GitHub Actions hits this every 5 minutes; a catch-up window means a late
 // tick still rings, and the fired-marker makes repeats harmless.
-const FIRE_WINDOW_MIN = 45;
+const FIRE_WINDOW_MIN = 90;
 
 function tzParts(date, tz) {
   try {
