@@ -32,6 +32,54 @@ router.get('/translations', async (req, res) => {
   res.json(rows);
 });
 
+// GET /v1/quran/offline?translation=en.sahih — the whole Quran (all 114 surahs,
+// every ayah with Arabic text + translation) in one response, for PWA offline packs.
+// Registered BEFORE /:surah so "offline" is not parsed as a surah number.
+router.get('/offline', async (req, res) => {
+  const translationCode = resolveQuranTranslation(req);
+  const cacheKey = `quran:offline:${translationCode}`;
+  const cached = await getCached(cacheKey);
+  if (cached) return res.json(cached);
+
+  const surahsResult = await db.query('SELECT number, name_arabic, name_english, name_transliteration, revelation_place, ayah_count FROM surahs ORDER BY number');
+  const ayahsResult = await db.query(
+    `SELECT a.surah_number, a.ayah_number, a.text_arabic, at.text AS translation
+     FROM ayahs a
+     LEFT JOIN translations t ON t.code = $1
+     LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
+     ORDER BY a.surah_number, a.ayah_number`,
+    [translationCode]
+  );
+
+  // group ayahs by surah, compacted to [n, arabic, translation] triplets
+  const bySurah = new Map();
+  for (const row of ayahsResult.rows) {
+    if (!bySurah.has(row.surah_number)) bySurah.set(row.surah_number, []);
+    bySurah.get(row.surah_number).push([row.ayah_number, row.text_arabic, row.translation || '']);
+  }
+
+  const surahs = surahsResult.rows.map(s => ({
+    number: s.number,
+    name_arabic: s.name_arabic,
+    name_english: s.name_english,
+    name_transliteration: s.name_transliteration,
+    revelation_place: s.revelation_place,
+    ayah_count: s.ayah_count,
+    ayahs: bySurah.get(s.number) || []
+  }));
+
+  const payload = {
+    generated: new Date().toISOString(),
+    translation_code: translationCode,
+    surah_count: surahs.length,
+    ayah_count: ayahsResult.rows.length,
+    surahs
+  };
+  await setCached(cacheKey, payload);
+  res.set('Cache-Control', 'private, max-age=86400');
+  res.json(payload);
+});
+
 // GET /v1/quran/surahs — list all 114 surahs
 router.get('/surahs', async (req, res) => {
   const cacheKey = 'quran:surahs:all';
