@@ -209,6 +209,29 @@ app.use('/v1/stories', storiesRoutes);
 const dictionaryRoutes = require('./routes/dictionary');
 app.use('/v1/dictionary', dictionaryRoutes);
 
+// ---------- Web app gate (/web/v1/...) ----------
+// The published Ilm Dictionary app (GitHub Pages) calls these endpoints with
+// NO API key: the server acts as an authenticated client on the app's behalf,
+// so the app's key never ships in public JavaScript. Foreign browser origins
+// are rejected server-side, and the global per-IP rate limit still applies.
+// A keyless, key-free mirror of the endpoints the app actually uses.
+const ALLOWED_WEB_ORIGINS = [
+  'https://zynoraprime2026-dotcom.github.io',
+  'http://localhost',
+  'http://127.0.0.1',
+];
+app.use('/web/v1', (req, res, next) => {
+  const origin = req.header('origin');
+  if (origin && !ALLOWED_WEB_ORIGINS.some(o => origin === o || origin.startsWith(o + ':'))) {
+    return res.status(403).json({ error: 'Origin not allowed' });
+  }
+  req.apiClient = { tier: 'free', source: 'web' };
+  next();
+});
+app.use('/web/v1/dictionary', dictionaryRoutes);
+app.use('/web/v1/quran', quranRoutes);
+app.use('/web/v1/roots', rootsRoutes);
+
 // 404 handler
 app.use((req, res) => res.status(404).json({ error: 'Endpoint not found' }));
 

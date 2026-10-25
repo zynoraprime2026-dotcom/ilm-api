@@ -2,6 +2,7 @@
   "version": 2,
   "rewrites": [
     { "source": "/v1/(.*)", "destination": "/api" },
+    { "source": "/web/(.*)", "destination": "/api" },
     { "source": "/health", "destination": "/api" }
   ]
 }
