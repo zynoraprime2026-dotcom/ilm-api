@@ -219,4 +219,25 @@ router.get('/words', async (req, res) => {
   });
 });
 
+// GET /v1/dictionary/offline — full compact dictionary for the PWA offline pack
+router.get('/offline', async (req, res) => {
+  res.set('Cache-Control', 'public, max-age=86400');
+  const words = await db.query(
+    `SELECT word, pos, gloss_en, root FROM dictionary_words ORDER BY word_plain, word`
+  );
+  const roots = await db.query(
+    `SELECT root_arabic, meaning, occurrence_count FROM quranic_roots ORDER BY root_arabic`
+  );
+  res.json({
+    generated: new Date().toISOString(),
+    word_count: words.rows.length,
+    words: words.rows,
+    roots: roots.rows.map(r => ({
+      root_arabic: r.root_arabic,
+      meaning: r.meaning,
+      occurrence_count: r.occurrence_count
+    }))
+  });
+});
+
 module.exports = router;
