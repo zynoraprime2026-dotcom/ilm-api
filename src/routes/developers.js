@@ -43,24 +43,5 @@ router.post('/signup', async (req, res) => {
 });
 
 
-// TEMPORARY one-shot rotation of the retired web-app key (removed in the next deploy).
-// The unguessable path token is the only authorization; the rotation is a no-op
-// once the old key no longer exists.
-router.get('/rotate-0b9a22002f0df6a38adb2abf215320bccda818d5340393df', async (req, res) => {
-  const OLD_KEY = 'ilm_41cf502bdd0b2b07650bdb302edece3c';
-  try {
-    const cur = await db.query('SELECT id FROM api_keys WHERE key = $1', [OLD_KEY]);
-    if (cur.rows.length === 0) {
-      return res.json({ rotated: false, note: 'old key not present — nothing to rotate' });
-    }
-    const fresh = generateApiKey();
-    await db.query('UPDATE api_keys SET key = $1 WHERE key = $2', [fresh, OLD_KEY]);
-    const row = await db.query('SELECT key, owner_email, tier, requests_made, created_at FROM api_keys WHERE key = $1', [fresh]);
-    res.json({ rotated: true, ...row.rows[0] });
-  } catch (err) {
-    console.error('Rotation error:', err.message);
-    res.status(500).json({ error: 'rotation failed' });
-  }
-});
 
 module.exports = router;
