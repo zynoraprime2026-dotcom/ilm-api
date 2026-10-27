@@ -134,9 +134,10 @@ router.get('/:collection/:number', async (req, res) => {
   if (!collection || !number) return res.status(400).json({ error: 'collection and number are required' });
   try {
     const r = await resolve(collection, number);
-    return res.json(r.recorded
+    const dbg = { mapLoaded: Object.keys(RECORD_MAPS).length, mapped: (RECORD_MAPS[collection] || {})[String(number)] || null };
+    return res.json(Object.assign(r.recorded
       ? { recorded: true, clip: `/v1/hadith-audio/${collection}/${encodeURIComponent(number)}.mp3`, voice: 'recorded recitation' }
-      : { recorded: false, tts: true, voice: 'arabic tts' });
+      : { recorded: false, tts: true, voice: 'arabic tts' }, dbg));
   } catch (e) {
     return res.json({ recorded: false, tts: true, voice: 'arabic tts' });
   }
