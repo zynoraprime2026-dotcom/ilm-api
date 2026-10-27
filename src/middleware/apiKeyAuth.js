@@ -3,6 +3,9 @@ const db = require('../config/db');
 // Simple API key check — expects header: x-api-key
 // Public endpoints (docs, health) should skip this middleware.
 async function apiKeyAuth(req, res, next) {
+  // Web-gated clients (/web/v1, origin-checked at the gate) act on the app's
+  // behalf with no key — skip the key lookup for them.
+  if (req.apiClient && req.apiClient.source === 'web') return next();
   const key = req.header('x-api-key');
 
   if (!key) {

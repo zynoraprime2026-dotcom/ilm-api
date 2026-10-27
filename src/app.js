@@ -228,8 +228,14 @@ app.use('/web/v1', (req, res, next) => {
   req.apiClient = { tier: 'free', source: 'web' };
   next();
 });
-app.use('/web/v1/dictionary', dictionaryRoutes);
+// routes used by the published Ilm Daily app (also keyless, origin-gated)
+app.use('/web/v1/prayer-times', prayerTimesRoutes);
+app.use('/web/v1/alarm', alarmRoutes);
 app.use('/web/v1/quran', quranRoutes);
+app.use('/web/v1/tafsir', tafsirRoutes);
+app.use('/web/v1/hadith', hadithRoutes);
+app.use('/web/v1/duas', duasRoutes);
+app.use('/web/v1/dictionary', dictionaryRoutes);
 app.use('/web/v1/roots', rootsRoutes);
 
 // 404 handler
