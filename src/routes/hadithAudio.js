@@ -53,6 +53,10 @@ function textsMatch(ours, theirs) {
   return bw.length >= 3 && hit / bw.length >= 0.7;
 }
 
+// content-matched record numbers (riyad/malik editions order hadiths
+// completely differently than the recitation library)
+const RECORD_MAPS = require('./hadithRecordMap');
+
 const RES_CACHE = new Map(); // "slug:number" -> resolution
 const RES_MAX = 2000;
 
