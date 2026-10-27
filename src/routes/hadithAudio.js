@@ -79,6 +79,7 @@ async function resolve(collection, number) {
         try {
           const r = await fetch(`https://api.hadith.to/v1/hadith/${ext}/${c}`, {
             signal: AbortSignal.timeout(8000),
+            headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36' },
           });
           if (!r.ok) continue;
           const d = await r.json();
@@ -106,7 +107,10 @@ router.get('/:collection/:number.mp3', async (req, res) => {
   try { r = await resolve(collection, number); } catch (e) { r = { recorded: false }; }
   if (!r.recorded) return res.status(404).json({ error: 'No recording for this hadith' });
   try {
-    const up = await fetch(r.audio, { signal: AbortSignal.timeout(25000) });
+    const up = await fetch(r.audio, {
+      signal: AbortSignal.timeout(25000),
+      headers: { 'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124 Safari/537.36' },
+    });
     if (!up.ok) return res.status(502).json({ error: 'Recording unavailable' });
     const buf = Buffer.from(await up.arrayBuffer());
     if (!buf || buf.length < 1000) return res.status(502).json({ error: 'Recording unavailable' });
