@@ -74,8 +74,12 @@ async function resolve(collection, number) {
       mine = q.rows[0] ? q.rows[0].text_arabic : null;
     } catch (e) { /* DB hiccup -> TTS fallback */ }
     if (mine) {
-      // numbering can drift by one between editions: check neighbours too
-      for (const c of [...new Set([n, n - 1, n + 1])].filter((x) => x > 0)) {
+      // content-mapped record numbers first (riyad/malik editions order their
+      // hadiths completely differently), then raw + neighbouring numbers
+      const mapped = RECORD_MAPS[collection] && RECORD_MAPS[collection][String(number)];
+      const mappedN = mapped ? parseInt(mapped, 10) : null;
+      const cands = [mappedN, mappedN - 1, mappedN + 1, n, n - 1, n + 1];
+      for (const c of [...new Set(cands)].filter((x) => x > 0)) {
         try {
           const r = await fetch(`https://api.hadith.to/v1/hadith/${ext}/${c}`, {
             signal: AbortSignal.timeout(8000),
