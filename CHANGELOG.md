@@ -3,6 +3,17 @@
 All notable changes to the Ilm API are recorded here, so researchers citing
 specific content can reference a stable version.
 
+## [1.5.0] — Leaner payloads
+- `GET /v1/hadith/search` now accepts `offset` and returns `total`, `has_more`,
+  `limit` and `count`, so results can be paged instead of only truncated
+- New response shaping on hadith search: `excerpt=<chars>` truncates the long
+  `text_*` fields to a word boundary, `compact=true` is shorthand for a 400
+  character excerpt, and `fields=narrator,grade` projects just the keys asked for
+  (this cuts a two-result query from ~34KB to under 2KB for agent consumers)
+- Quran and tafsir GETs now send `s-maxage=86400, stale-while-revalidate=604800`
+  so Vercel's CDN serves immutable scripture text instead of hitting Neon
+- Shared shaping helpers live in `src/lib/shape.js`
+
 ## [1.4.0] — Phase 5: Trust & Scale
 - Added source verification metadata: `source_edition` on ayahs and hadith,
   `publisher`/`source_edition` on tafsir entries

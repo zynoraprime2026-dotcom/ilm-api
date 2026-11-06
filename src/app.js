@@ -197,6 +197,18 @@ app.use('/v1/alarm', alarmRoutes);
 
 // Everything else under /v1 requires a developer API key
 app.use('/v1', apiKeyAuth);
+
+// Scripture text is immutable, so let the CDN hold it instead of Neon.
+// Routes may override this with their own Cache-Control.
+const CDN_IMMUTABLE = 'public, s-maxage=86400, stale-while-revalidate=604800';
+function cdnCache(prefix) {
+  return (req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/export')) res.set('Cache-Control', CDN_IMMUTABLE);
+    next();
+  };
+}
+app.use('/v1/quran', cdnCache('/v1/quran'));
+app.use('/v1/tafsir', cdnCache('/v1/tafsir'));
 app.use('/v1/quran', quranRoutes);
 app.use('/v1/tafsir', tafsirRoutes);
 app.use('/v1/hadith', hadithRoutes);

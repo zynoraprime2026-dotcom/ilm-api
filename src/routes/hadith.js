@@ -4,6 +4,7 @@ const db = require('../config/db');
 const { getCached, setCached } = require('../config/cache');
 const requireTier = require('../middleware/requireTier');
 const { LANGUAGES, HADITH_CODES, normalizeLanguage, stripArabicDiacritics } = require('../config/languages');
+const { shapeRows, pagination, pageMeta } = require('../lib/shape');
 
 // ---- Arabic book names (lazy migration) ----
 const ARABIC_NAMES = {
@@ -164,11 +165,31 @@ router.get('/search', async (req, res) => {
     params.push(collection);
     sql += ` AND c.slug = $${params.length}`;
   }
-  params.push(Math.min(parseInt(limit, 10) || 20, 100));
+
+  // Total for pagination: same filters, count only.
+  const countSql = sql.replace(/SELECT[\s\S]*?\sFROM\s/, 'SELECT COUNT(*)::int AS n FROM ');
+  let total = null;
+  try {
+    const counted = await db.query(countSql, params);
+    total = counted.rows[0] ? counted.rows[0].n : null;
+  } catch (e) { total = null; /* non-fatal: still return the page */ }
+
+  const { limit: limitN, offset } = pagination(req.query, { defaultLimit: parseInt(limit, 10) || 20 });
+  params.push(limitN);
   sql += ` LIMIT $${params.length}`;
+  params.push(offset);
+  sql += ` OFFSET $${params.length}`;
 
   const { rows } = await db.query(sql, params);
-  res.json({ query: q, language: lang, count: rows.length, results: rows });
+  const { rows: results, opts } = shapeRows(rows, req.query);
+  res.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=600');
+  res.json({
+    query: q,
+    language: lang,
+    ...pageMeta({ limit: limitN, offset, returned: results.length, total }),
+    excerpted: opts.excerpt > 0,
+    results
+  });
 });
 
 // GET /v1/hadith/export?collection=bukhari — full collection text, for
