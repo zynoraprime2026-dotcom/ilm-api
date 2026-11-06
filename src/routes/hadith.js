@@ -169,6 +169,20 @@ router.get('/search', async (req, res) => {
     params.push(collection);
     sql += ` AND c.slug = $${params.length}`;
   }
+  // Authenticity filter: grade=sahih / hasan / da'if (substring, so the
+  // collections' varied grading strings all match).
+  if (req.query.grade) {
+    params.push('%' + String(req.query.grade) + '%');
+    sql += ` AND COALESCE(h.grade, '') ILIKE $${params.length}`;
+  }
+  // Narrow to one book inside a collection.
+  if (req.query.book) {
+    const bookNum = parseInt(req.query.book, 10);
+    if (Number.isFinite(bookNum)) {
+      params.push(bookNum);
+      sql += ` AND h.book_number = $${params.length}`;
+    }
+  }
 
   // Relevance ordering. Without this the API returned matches in table order,
   // so a search for "patience" could surface a hadith that merely mentions it.

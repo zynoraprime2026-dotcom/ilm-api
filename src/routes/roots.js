@@ -3,13 +3,28 @@ const router = express.Router();
 const requireTier = require('../middleware/requireTier');
 const db = require('../config/db');
 const { getCached, setCached } = require('../config/cache');
+const { pagination, pageMeta, shapeRows } = require('../lib/shape');
 
 // GET /v1/roots — list all roots with occurrence counts
 router.get('/', async (req, res) => {
+  // 1,651 roots used to arrive as one 480KB array. Clients that ask for
+  // limit/offset now get an envelope; plain requests keep the array shape but
+  // are capped, with X-Total-Count telling them how much is left.
+  const { limit, offset } = pagination(req.query, { defaultLimit: 500, maxLimit: 1000 });
+  const wantsEnvelope = req.query.limit !== undefined || req.query.offset !== undefined || req.query.format === 'json';
+  const totalRes = await db.query('SELECT COUNT(*)::int AS n FROM quranic_roots');
+  const total = totalRes.rows[0] ? totalRes.rows[0].n : null;
   const { rows } = await db.query(
-    'SELECT id, root_arabic, root_transliteration, meaning, occurrence_count FROM quranic_roots ORDER BY occurrence_count DESC'
+    'SELECT id, root_arabic, root_transliteration, meaning, occurrence_count FROM quranic_roots ORDER BY occurrence_count DESC, id LIMIT $1 OFFSET $2',
+    [limit, offset]
   );
-  res.json(rows);
+  const { rows: roots } = shapeRows(rows, req.query);
+  if (wantsEnvelope) {
+    return res.json({ ...pageMeta({ limit, offset, returned: roots.length, total }), roots });
+  }
+  if (typeof total === 'number') res.set('X-Total-Count', String(total));
+  if (typeof total === 'number' && offset + roots.length < total) res.set('X-Result-Truncated', 'true');
+  res.json(roots);
 });
 
 // GET /v1/roots/:root/occurrences — every ayah where a root appears

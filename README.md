@@ -4,6 +4,10 @@ Islamic knowledge API — a work in progress.
 
 *Ilm (علم)* means knowledge. The goal: one clean API serving Islamic data for apps built in Ghana and beyond.
 
+## Docs
+
+Interactive reference: https://ilm-api.vercel.app/docs (OpenAPI JSON at /openapi.json). Both are public.
+
 ## Planned features
 
 1. Prayer times by city / coordinates (Ghana-first: Tarkwa, Accra, Takoradi, Kumasi...)

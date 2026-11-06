@@ -56,10 +56,12 @@ router.get('/search', async (req, res) => {
     return res.status(500).json({ error: 'Database error during fiqh search' });
   }
 
+  const shaped = shapeRows(rows, req.query);
   res.json({
-    count: rows.length,
+    count: shaped.rows.length,
     note: 'Mainstream comparative positions from classical manuals. For a personal ruling (fatwa), consult a qualified scholar.',
-    rulings: rows,
+    rulings: shaped.rows,
+    excerpted: shaped.opts.excerpt > 0,
   });
 });
 

@@ -51,6 +51,31 @@ const limiter = rateLimit({
 app.use(limiter);
 
 // Serve static docs/landing page
+// ---------- Public API documentation ----------
+// Left unauthenticated on purpose: someone evaluating the API has no key yet.
+const openapiSpec = require('./openapi');
+app.get('/openapi.json', (req, res) => {
+  res.set('Cache-Control', 'public, s-maxage=3600');
+  res.json(openapiSpec);
+});
+app.get(['/docs', '/v1/docs'], (req, res) => {
+  res.set('Cache-Control', 'public, s-maxage=3600');
+  res.type('html').send(`<!doctype html>
+<html><head><meta charset="utf-8"><title>Ilm API docs</title>
+<link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"></head>
+<body><div id="swagger-ui"></div>
+<script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+<script>
+  window.ui = SwaggerUIBundle({
+    url: '/openapi.json',
+    dom_id: '#swagger-ui',
+    docExpansion: 'list',
+    persistAuthorization: true,
+    tryItOutEnabled: true
+  });
+</script></body></html>`);
+});
+
 app.use(express.static(path.join(__dirname, '..', 'public')));
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 
@@ -211,6 +236,8 @@ app.use('/v1/quran', cdnCache('/v1/quran'));
 app.use('/v1/tafsir', cdnCache('/v1/tafsir'));
 app.use('/v1/quran', quranRoutes);
 app.use('/v1/tafsir', tafsirRoutes);
+app.use('/v1/search', require('./routes/search'));
+app.use('/v1/cite', require('./routes/cite'));
 app.use('/v1/hadith', hadithRoutes);
 app.use('/v1/hadith-audio', hadithAudioRoutes);
 app.use('/v1/roots', rootsRoutes);

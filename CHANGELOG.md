@@ -3,6 +3,21 @@
 All notable changes to the Ilm API are recorded here, so researchers citing
 specific content can reference a stable version.
 
+## [1.6.0] — Discoverable and citable
+- New `/openapi.json` (public) and `/docs` (Swagger UI) so the API describes itself;
+  neither requires a key, because nobody evaluating the API has one yet
+- New `GET /v1/cite` returns a canonical reference for an ayah or hadith: stable
+  citation string, Arabic and translated text, and a URL back to the record
+- New `GET /v1/search` runs one query across Quran, hadith, duas and fiqh and
+  returns labelled sections with stable URLs; `only=` narrows the corpora
+- `/v1/hadith/search` gained `grade=` (authenticity, e.g. `sahih`) and `book=`
+  filters
+- `/v1/roots` no longer returns all 1,651 roots in one 480KB array: `limit`/`offset`
+  return an envelope with `total` and `has_more`, and plain requests are capped at
+  500 rows with `X-Total-Count` and `X-Result-Truncated` headers
+- `excerpt`/`compact`/`fields` shaping extended to `/v1/tafsir` and `/v1/fiqh`
+  (tafsir previously sent ~28KB per verse, fiqh ~8KB per topic)
+
 ## [1.5.0] — Leaner payloads
 - `GET /v1/hadith/search` now accepts `offset` and returns `total`, `has_more`,
   `limit` and `count`, so results can be paged instead of only truncated

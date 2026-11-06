@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { getCached, setCached } = require('../config/cache');
+const { shapeRows } = require('../lib/shape');
 
 // GET /v1/tafsir/sources — list available tafsir sources
 router.get('/sources', async (req, res) => {
@@ -36,7 +37,7 @@ router.get('/search', async (req, res) => {
   sqlText += ` ORDER BY a.surah_number, a.ayah_number LIMIT $${params.length}`;
 
   const { rows } = await db.query(sqlText, params);
-  res.json({ query: q, count: rows.length, results: rows });
+  res.json({ query: q, count: rows.length, results: shapeRows(rows, req.query).rows });
 });
 
 router.get('/:surah/:ayah', async (req, res) => {
@@ -65,8 +66,10 @@ router.get('/:surah/:ayah', async (req, res) => {
     return res.status(404).json({ error: 'No tafsir found for this ayah/source combination' });
   }
 
-  const payload = { surah: surahNum, ayah: ayahNum, tafsir: rows };
-  await setCached(cacheKey, payload);
+  const shaped = shapeRows(rows, req.query);
+  const payload = { surah: surahNum, ayah: ayahNum, excerpted: shaped.opts.excerpt > 0, tafsir: shaped.rows };
+  // Only cache the untouched payload; shaped responses depend on query params.
+  if (!shaped.opts.excerpt && !shaped.opts.fields) await setCached(cacheKey, { surah: surahNum, ayah: ayahNum, tafsir: rows });
   res.json(payload);
 });
 
