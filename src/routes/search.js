@@ -6,6 +6,8 @@ const { pagination, pageMeta } = require('../lib/shape');
 
 const ARABIC = /[\u0600-\u06FF]/;
 const HARAQAT = '\u064B\u064C\u064D\u064E\u064F\u0650\u0651\u0652\u0670\u0640';
+const LETTER_FOLD = '\u0671\u0623\u0625\u0622\u0649\u0629'; // ٱ أ إ آ ى ة
+const LETTER_PLAIN = '\u0627\u0627\u0627\u0627\u064A\u0647'; // ا ا ا ا ي ه
 const BASE = 'https://ilm-api.vercel.app';
 
 // GET /v1/search?q=mercy&limit=5&language=en
@@ -30,10 +32,11 @@ router.get('/', async (req, res) => {
         const { rows } = await db.query(
           `SELECT a.surah_number, a.ayah_number, s.name_english, s.name_transliteration, a.text_arabic
            FROM ayahs a JOIN surahs s ON s.number = a.surah_number
-           WHERE translate(a.text_arabic, $1, '') LIKE '%' || translate($2, $1, '') || '%'
+           WHERE translate(translate(a.text_arabic, $1, ''), $4, $5)
+                 LIKE '%' || translate(translate($2, $1, ''), $4, $5) || '%'
            ORDER BY a.surah_number, a.ayah_number
            LIMIT $3`,
-          [HARAQAT, q, limit]
+          [HARAQAT, q, limit, LETTER_FOLD, LETTER_PLAIN]
         );
         sections.quran = {
           count: rows.length,
@@ -45,13 +48,15 @@ router.get('/', async (req, res) => {
           }))
         };
       } else {
+        // Translations are keyed like "en.clearquran", not bare "en", so pick the
+        // first translation for the requested language.
         const { rows } = await db.query(
           `SELECT a.surah_number, a.ayah_number, s.name_english, s.name_transliteration, at.text AS translation
            FROM ayah_translations at
-           JOIN translations t ON t.id = at.translation_id AND t.code = $2
+           JOIN translations t ON t.id = at.translation_id
            JOIN ayahs a ON a.id = at.ayah_id
            JOIN surahs s ON s.number = a.surah_number
-           WHERE at.text ILIKE '%' || $1 || '%'
+           WHERE t.language = $2 AND at.text ILIKE '%' || $1 || '%'
            ORDER BY a.surah_number, a.ayah_number
            LIMIT $3`,
           [q, lang, limit]
@@ -77,10 +82,11 @@ router.get('/', async (req, res) => {
         rows = (await db.query(
           `SELECT c.slug AS collection, h.hadith_number, h.narrator, h.text_arabic
            FROM hadiths h JOIN hadith_collections c ON c.id = h.collection_id
-           WHERE translate(h.text_arabic, $1, '') LIKE '%' || translate($2, $1, '') || '%'
+           WHERE translate(translate(h.text_arabic, $1, ''), $4, $5)
+                 LIKE '%' || translate(translate($2, $1, ''), $4, $5) || '%'
            ORDER BY length(h.text_arabic) ASC
            LIMIT $3`,
-          [HARAQAT, q, limit]
+          [HARAQAT, q, limit, LETTER_FOLD, LETTER_PLAIN]
         )).rows;
         sections.hadith = {
           count: rows.length,

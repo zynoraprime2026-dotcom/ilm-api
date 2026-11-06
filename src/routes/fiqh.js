@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
+const { shapeRows } = require('../lib/shape');
 
 // GET /v1/fiqh/chapters — list chapters with topic and ruling counts
 router.get('/chapters', async (req, res) => {
