@@ -125,7 +125,11 @@ router.get('/search', async (req, res) => {
   if (req.query.language && !requested) {
     return res.status(400).json({ error: `Unsupported language "${req.query.language}"`, supported: Object.keys(LANGUAGES) });
   }
-  const lang = requested || 'en';
+  // An Arabic-script query should search the Arabic text, not try to match it
+  // against English translations (which found nothing and pushed clients back
+  // onto their own memory for quotations).
+  const ARABIC_SCRIPT = /[\u0600-\u06FF]/;
+  const lang = requested || (ARABIC_SCRIPT.test(String(q)) ? 'ar' : 'en');
 
   const params = [q];
   let sql;
