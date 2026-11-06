@@ -13,6 +13,10 @@ specific content can reference a stable version.
 - Quran and tafsir GETs now send `s-maxage=86400, stale-while-revalidate=604800`
   so Vercel's CDN serves immutable scripture text instead of hitting Neon
 - Shared shaping helpers live in `src/lib/shape.js`
+- Hadith search now ranks matches by `ts_rank` relevance instead of table order,
+  so a search for "patience" surfaces the hadith about patience rather than one
+  that merely mentions the word; the count query drops the ORDER BY so `total`
+  keeps working
 
 ## [1.4.0] — Phase 5: Trust & Scale
 - Added source verification metadata: `source_edition` on ayahs and hadith,

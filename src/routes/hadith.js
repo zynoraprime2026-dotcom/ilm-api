@@ -166,8 +166,18 @@ router.get('/search', async (req, res) => {
     sql += ` AND c.slug = $${params.length}`;
   }
 
+  // Relevance ordering. Without this the API returned matches in table order,
+  // so a search for "patience" could surface a hadith that merely mentions it.
+  if (lang === 'en') {
+    sql += ` ORDER BY ts_rank(to_tsvector('english', h.text_english), plainto_tsquery('english', $1)) DESC, h.id ASC`;
+  } else if (lang !== 'ar') {
+    sql += ` ORDER BY ts_rank(to_tsvector('simple', ht.text), plainto_tsquery('simple', $1)) DESC, h.id ASC`;
+  }
+
   // Total for pagination: same filters, count only.
-  const countSql = sql.replace(/SELECT[\s\S]*?\sFROM\s/, 'SELECT COUNT(*)::int AS n FROM ');
+  const countSql = sql
+    .replace(/SELECT[\s\S]*?\sFROM\s/, 'SELECT COUNT(*)::int AS n FROM ')
+    .replace(/\sORDER BY[\s\S]*$/i, '');
   let total = null;
   try {
     const counted = await db.query(countSql, params);
