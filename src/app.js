@@ -222,6 +222,7 @@ app.use('/v1/alarm', alarmRoutes);
 
 // Everything else under /v1 requires a developer API key
 app.use('/v1', apiKeyAuth);
+app.use('/v1', require('./middleware/rateLimit'));
 
 // Scripture text is immutable, so let the CDN hold it instead of Neon.
 // Routes may override this with their own Cache-Control.
