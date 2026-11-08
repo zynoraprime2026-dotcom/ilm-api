@@ -25,6 +25,36 @@ function resolveQuranTranslation(req) {
   return (QURAN_TRANSLATIONS[lang] || ['en.sahih'])[0];
 }
 
+// An unknown ?translation= code used to sail through the join and return a
+// surah with zero ayahs under HTTP 200. Validate it against the translations
+// table once, then 400 with the fix instead of handing back an empty Quran.
+let translationCodeSet = null;
+async function knownTranslationCodes() {
+  if (translationCodeSet) return translationCodeSet;
+  const { rows } = await db.query('SELECT code FROM translations');
+  if (rows.length) {
+    translationCodeSet = new Set(rows.map(r => r.code));
+    const t = setTimeout(() => { translationCodeSet = null; }, 6 * 60 * 60 * 1000);
+    if (t.unref) t.unref();
+  }
+  return translationCodeSet || new Set();
+}
+router.use(async (req, res, next) => {
+  const code = req.query.translation;
+  if (!code) return next();
+  try {
+    const codes = await knownTranslationCodes();
+    if (!codes.size || codes.has(String(code))) return next();
+    return res.status(400).json({
+      error: 'Unknown translation code: ' + code,
+      hint: 'Use ?language=fr for that language\'s default translation, or GET /v1/quran/translations for every valid code.',
+      translations_url: '/v1/quran/translations',
+    });
+  } catch (e) {
+    next();
+  }
+});
+
 // GET /v1/quran/translations — list all available translations
 router.get('/translations', async (req, res) => {
   res.set('Cache-Control', 'private, max-age=86400');

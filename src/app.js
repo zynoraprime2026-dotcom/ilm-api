@@ -87,7 +87,7 @@ app.get('/health', (req, res) => res.json({ status: 'ok', service: 'ilm-api' }))
 // GET /v1/version — for researchers who need to cite a stable API version
 app.get('/v1/version', (req, res) => {
   res.json({
-    version: '1.4.0',
+    version: process.env.API_VERSION || require('../package.json').version,
     changelog_url: 'See CHANGELOG.md in the project repository',
   });
 });

@@ -52,6 +52,7 @@ async function seedSurahsAndArabic() {
   const arabicSurahs = arabicData.data.surahs;
 
   const ayahIdMap = {};
+  const stripBom = t => String(t == null ? '' : t).replace(/^\uFEFF+/, '');
   console.log('Inserting ayahs (batched, 100/req)...');
   for (const surah of arabicSurahs) {
     const ayahBatches = chunk(surah.ayahs, 100);
@@ -61,7 +62,7 @@ async function seedSurahsAndArabic() {
       batch.forEach((ayah, i) => {
         const o = i * 5;
         values.push(`($${o+1},$${o+2},$${o+3},$${o+4},$${o+5},'quran-uthmani')`);
-        params.push(surah.number, ayah.numberInSurah, ayah.text, ayah.juz, ayah.page);
+        params.push(surah.number, ayah.numberInSurah, stripBom(ayah.text), ayah.juz, ayah.page);
       });
       const rows = await sql.query(
         `INSERT INTO ayahs (surah_number, ayah_number, text_arabic, juz, page, source_edition)

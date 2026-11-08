@@ -1,6 +1,6 @@
 {
   "name": "ilm-api",
-  "version": "1.0.0",
+  "version": "1.6.0",
   "description": "A unified Islamic knowledge API \u2014 Quran, Hadith, Prayer Times, and Du'as",
   "main": "src/server.js",
   "type": "commonjs",
