@@ -317,6 +317,8 @@ router.get('/:collection', async (req, res) => {
     has_prev: page > 1,
     next_page: page < lastPage ? page + 1 : null,
     prev_page: page > 1 ? page - 1 : null,
+    // how many records in this collection carry no text at all (hidden above)
+    unavailable: unavailable,
     hadiths: rows,
   });
 });
