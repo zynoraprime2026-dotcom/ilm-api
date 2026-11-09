@@ -308,5 +308,50 @@ const spec = {
   },
 };
 
+
+// Documentation drift was real: /v1/meta published 57 endpoints while the spec
+// described 29, so a developer reading /docs could not find /v1/quran/:surah or
+// /v1/hadith/:collection at all. Every listed endpoint now gets a generated
+// entry when the hand-written one is missing, so the docs cannot fall behind the
+// routes. Generated entries are honest: method, path, summary and the auth
+// requirement, with no invented schemas.
+const { ENDPOINTS } = require('./lib/endpoints');
+
+(function fillMissingPaths() {
+  const toOpenApiPath = (p) => p.replace(/:([A-Za-z0-9_]+)/g, '{$1}');
+  for (const raw of ENDPOINTS) {
+    const m = String(raw).match(/^(GET|POST|PUT|PATCH|DELETE)\s+(\S+)/);
+    if (!m) continue;
+    const method = m[1].toLowerCase();
+    const bare = m[2];
+    const path = toOpenApiPath(bare);
+    const note = String(raw).slice(m[0].length).trim();
+    if (!spec.paths[path]) spec.paths[path] = {};
+    if (spec.paths[path][method]) continue;
+    const needsKey = !['/v1/version', '/v1/languages', '/v1/meta', '/v1/status', '/v1/docs', '/openapi.json'].includes(bare)
+      && !bare.startsWith('/v1/developers')
+      && !bare.startsWith('/v1/auth');
+    spec.paths[path][method] = {
+      tags: [path.split('/')[2] || 'misc'],
+      summary: note || `${m[1]} ${bare}`,
+      description: needsKey
+        ? 'Requires the x-api-key header. See POST /v1/developers/signup.'
+        : 'Public: no API key required.',
+      security: needsKey ? [{ ApiKeyAuth: [] }] : [],
+      parameters: (path.match(/\{([A-Za-z0-9_]+)\}/g) || []).map((tok) => ({
+        name: tok.slice(1, -1),
+        in: 'path',
+        required: true,
+        schema: { type: 'string' },
+      })),
+      responses: {
+        200: { description: 'Successful response' },
+        401: { description: 'Missing or invalid API key' },
+        429: { description: 'Rate limit exceeded, see /v1/usage' },
+      },
+    };
+  }
+})();
+
 module.exports = spec;
 module.exports.pagedHelper = paged;
