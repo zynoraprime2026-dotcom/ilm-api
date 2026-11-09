@@ -4,6 +4,8 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const db = require('./config/db');
+const { stripBomDeep } = require('./lib/sanitize');
 const compression = require('compression');
 
 const apiKeyAuth = require('./middleware/apiKeyAuth');
@@ -82,7 +84,33 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'in
 // Public health check — no API key needed
 app.get('/read', (req, res) => res.redirect('/read.html'));
 app.get('/docs', (req, res) => res.redirect('/'));
-app.get('/health', (req, res) => res.json({ status: 'ok', service: 'ilm-api' }));
+// Health must tell the truth: it once answered ok while the database was
+// unreachable, which is how a broken DATABASE_URL looked healthy for an hour.
+app.get('/health', async (req, res) => {
+  const base = { service: 'ilm-api', version: process.env.API_VERSION || require('../package.json').version };
+  try {
+    await Promise.race([
+      db.query('SELECT 1'),
+      new Promise((_, reject) => setTimeout(() => reject(Object.assign(new Error('db probe timeout'), { code: 'ETIMEDOUT' })), 5000)),
+    ]);
+    res.json({ status: 'ok', db: 'up', ...base });
+  } catch (e) {
+    const msg = String(e.message || '');
+    const db_error = /password|SASL|authentication/i.test(msg) ? 'auth_failed'
+      : /ENOTFOUND|getaddrinfo|EAI_AGAIN/i.test(msg) ? 'dns_failed'
+      : /database .* does not exist/i.test(msg) ? 'wrong_database'
+      : /ETIMEDOUT|timeout/i.test(msg) ? 'timeout'
+      : 'unreachable';
+    res.status(503).json({ status: 'degraded', db: 'down', db_error, ...base });
+  }
+});
+
+// Strip stray BOMs from every JSON response (see src/lib/sanitize.js)
+app.use((req, res, next) => {
+  const json = res.json.bind(res);
+  res.json = (body) => json(stripBomDeep(body));
+  next();
+});
 
 // GET /v1/version — for researchers who need to cite a stable API version
 app.get('/v1/version', (req, res) => {
