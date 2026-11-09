@@ -262,7 +262,13 @@ router.get('/:collection', async (req, res) => {
   const coll = collRows.rows[0];
 
   const params = [coll.id];
+  // The upstream edition has 203 Sahih Muslim, 86 Nasa'i and 72 Tirmidhi rows
+  // with no Arabic and no English text at all. Paginating them served empty
+  // cards, so they are hidden by default and counted for transparency.
+  // ?include_unavailable=true returns everything.
+  const hasText = "(COALESCE(h.text_arabic,'') <> '' OR COALESCE(h.text_english,'') <> '')";
   let where = 'h.collection_id = $1';
+  if (!/^(1|true|yes)$/i.test(String(req.query.include_unavailable || ''))) where += ' AND ' + hasText;
   if (book != null && !isNaN(book)) {
     params.push(book);
     where += ` AND h.book_number = $${params.length}`;
@@ -280,6 +286,14 @@ router.get('/:collection', async (req, res) => {
 
   const totalRows = await db.query(`SELECT COUNT(*) FROM hadiths h WHERE ${where}`, params);
   const total = parseInt(totalRows.rows[0].count, 10);
+  let unavailable = 0;
+  try {
+    const emptyRows = await db.query(
+      `SELECT COUNT(*) FROM hadiths h WHERE ${where.replace(/ AND \(COALESCE.*$/, '')} AND NOT ${hasText}`,
+      params
+    );
+    unavailable = parseInt(emptyRows.rows[0].count, 10);
+  } catch (e) { unavailable = 0; }
 
   params.push(limit);
   params.push(offset);
@@ -336,6 +350,14 @@ router.get('/:collection/:number', async (req, res) => {
 
   if (rows.length === 0) return res.status(404).json({ error: 'Hadith not found' });
   const hadith = rows[0];
+  if (!String(hadith.text_arabic || '').trim() && !String(hadith.text_english || '').trim()) {
+    return res.status(404).json({
+      error: 'No text for this narration in the source edition',
+      collection, number,
+      text_available: false,
+      note: 'The open dataset this corpus is seeded from leaves this record blank in both languages.',
+    });
+  }
 
   // Prev/next hadith in this collection (browse hadith-by-hadith)
   try {
