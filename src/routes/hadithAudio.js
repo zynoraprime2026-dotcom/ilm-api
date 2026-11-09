@@ -111,6 +111,17 @@ router.get('/:collection/:number.mp3', async (req, res) => {
   const collection = String(req.params.collection || '').replace(/[^a-z0-9-]/gi, '');
   const number = decodeURIComponent(String(req.params.number || '')).slice(0, 40);
   if (!collection || !number) return res.status(400).json({ error: 'collection and number are required' });
+  try {
+    const src = await db.query(
+      `SELECT h.text_arabic FROM hadiths h
+         JOIN hadith_collections c ON c.id = h.collection_id
+        WHERE c.slug = $1 AND h.hadith_number = $2`,
+      [collection, number]
+    );
+    if (src.rows.length && !String(src.rows[0].text_arabic || '').trim()) {
+      return res.status(404).json({ error: 'No Arabic text for this narration', text_available: false });
+    }
+  } catch (e) { /* fall through */ }
   let r;
   try { r = await resolve(collection, number); } catch (e) { r = { recorded: false }; }
   if (!r.recorded) return res.status(404).json({ error: 'No recording for this hadith' });
@@ -136,6 +147,23 @@ router.get('/:collection/:number', async (req, res) => {
   const collection = String(req.params.collection || '').replace(/[^a-z0-9-]/gi, '');
   const number = decodeURIComponent(String(req.params.number || '')).slice(0, 40);
   if (!collection || !number) return res.status(400).json({ error: 'collection and number are required' });
+  // 375 records in the upstream edition carry no text at all. Answering "tts: true"
+  // for those told the app to speak an empty string, so a narration with nothing to
+  // read now says so instead.
+  try {
+    const src = await db.query(
+      `SELECT h.text_arabic FROM hadiths h
+         JOIN hadith_collections c ON c.id = h.collection_id
+        WHERE c.slug = $1 AND h.hadith_number = $2`,
+      [collection, number]
+    );
+    if (src.rows.length && !String(src.rows[0].text_arabic || '').trim()) {
+      return res.status(404).json({
+        error: 'No Arabic text for this narration, so there is nothing to read aloud',
+        collection, number, text_available: false,
+      });
+    }
+  } catch (e) { /* database hiccup: fall through to the normal resolution */ }
   try {
     const r = await resolve(collection, number);
     const dbg = { mapLoaded: Object.keys(RECORD_MAPS).length, mapped: (RECORD_MAPS[collection] || {})[String(number)] || null };

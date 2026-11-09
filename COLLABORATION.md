@@ -93,3 +93,26 @@ narrators (2,341), roots (1,651), /v1/search and /v1/cite all 200. `/web/v1` acc
 `GET /v1/fiqh` answered 404 because the router only exposed sub-paths. Added an index
 (counts + endpoint list + "not a fatwa" note), tested in `tests/fiqh.test.cjs`
 (`npm run test:fiqh`). 12 chapters, 77 topics, 308 rulings, 9 books, 6 scholars.
+
+### 2026-11-09 01:35 — Prime: hadith gaps are upstream placeholders, not a seeding bug
+
+Inspected the raw record in the source edition:
+
+    {"hadithnumber":"1","text":"","grades":"[]","reference":{"book":0,"hadith":1}}
+
+book 0, no grade, no text. 375 of these exist (muslim 203, nasai 86, tirmidhi 72,
+bukhari 9, ibnmajah 3, abudawud 2). They are placeholders for narrations the edition
+does not carry, so there is nothing to fetch.
+
+Tried to backfill from AhmedBaset/hadith-json before giving up on it: that corpus has
+Arabic, but its numbering is per chapter, not global, and aligning it to ours by number
+scored 0.17-0.35 similarity across offsets. Attaching hadith text by a guess would put
+the wrong narration under a citation, which is worse than an honest gap. Abandoned.
+
+Done instead:
+- `/v1/hadith-audio/:collection/:number` (and the .mp3 path) answer 404
+  `text_available:false` for a record with no Arabic, instead of `tts:true`, which told
+  the app to speak an empty string.
+- `npm run purge:empty-hadiths` prints the 375 with a sample and deletes nothing
+  without `--apply`. Not applied: removing rows from scripture records is the owner's
+  call, not mine.

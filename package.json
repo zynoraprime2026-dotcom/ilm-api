@@ -19,7 +19,8 @@
     "seed:duas": "node scripts/seedDuas.cjs",
     "migrate": "node scripts/migrate.cjs",
     "test:guards": "node tests/guards.test.cjs",
-    "test:fiqh": "node tests/fiqh.test.cjs"
+    "test:fiqh": "node tests/fiqh.test.cjs",
+    "purge:empty-hadiths": "node scripts/purgeEmptyHadiths.cjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
