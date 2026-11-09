@@ -144,13 +144,11 @@ router.get('/:slug/pdf', async (req, res) => {
       hint: 'Only the matns published as PDFs in the source collection are available. See /v1/mutoon/pdf-sources.',
     });
   }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 30000);
   try {
-    const headers = {};
-    if (req.headers.range) headers.Range = req.headers.range;
-    const up = await fetch(p.upstream, { headers, signal: controller.signal });
-    clearTimeout(timer);
+    const { up, err } = await fetchUpstream(p.upstream, req.headers.range, 30000);
+    if (err || !up) {
+      return res.status(502).json({ error: 'PDF host unavailable', detail: String(err && err.message || 'fetch failed') });
+    }
     if (!up.ok && up.status !== 206) {
       return res.status(502).json({ error: 'PDF host unavailable', upstream_status: up.status });
     }
@@ -168,10 +166,38 @@ router.get('/:slug/pdf', async (req, res) => {
     const { Readable } = require('stream');
     Readable.fromWeb(up.body).on('error', () => res.end()).pipe(res);
   } catch (e) {
-    clearTimeout(timer);
-    res.status(e && e.name === 'AbortError' ? 504 : 502).json({ error: 'PDF fetch failed' });
+    res.status(e && e.name === 'AbortError' ? 504 : 502).json({ error: 'PDF fetch failed', detail: String(e && e.message || '') });
   }
 });
+
+// Fetching a remote file is the flakiest thing this API does: archive.org
+// redirects to a download node that occasionally refuses or resets a connection,
+// and a single failure should not read to the user as "this matn has no file".
+// Two attempts, a short pause, and the real cause reported instead of a bare 502.
+async function fetchUpstream(url, rangeHeader, timeoutMs = 25000, attempts = 2) {
+  let lastErr = null;
+  for (let i = 0; i < attempts; i++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      const headers = {};
+      if (rangeHeader) headers.Range = rangeHeader;
+      const up = await fetch(url, { headers, signal: controller.signal });
+      clearTimeout(timer);
+      if ((up.status === 429 || up.status === 503) && i < attempts - 1) {
+        lastErr = new Error('upstream busy: ' + up.status);
+        await new Promise((r) => setTimeout(r, 600));
+        continue;
+      }
+      return { up };
+    } catch (e) {
+      clearTimeout(timer);
+      lastErr = e;
+      if (i < attempts - 1) await new Promise((r) => setTimeout(r, 500));
+    }
+  }
+  return { err: lastErr };
+}
 
 // Streams the recording with Range support so a phone can seek without pulling the
 // whole file, and keeps the upstream host out of the client's request path.
@@ -186,13 +212,11 @@ router.get('/:slug/stream', async (req, res) => {
       hint: 'This matn has no verified recording yet. See /v1/mutoon/audio-sources.',
     });
   }
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), 25000);
   try {
-    const headers = {};
-    if (req.headers.range) headers.Range = req.headers.range;
-    const up = await fetch(upstream, { headers, signal: controller.signal });
-    clearTimeout(timer);
+    const { up, err } = await fetchUpstream(upstream, req.headers.range);
+    if (err || !up) {
+      return res.status(502).json({ error: 'Recording host unavailable', detail: String(err && err.message || 'fetch failed') });
+    }
     if (!up.ok && up.status !== 206) {
       return res.status(502).json({ error: 'Recording host unavailable', upstream_status: up.status });
     }
@@ -213,8 +237,7 @@ router.get('/:slug/stream', async (req, res) => {
     const { Readable } = require('stream');
     Readable.fromWeb(up.body).on('error', () => res.end()).pipe(res);
   } catch (e) {
-    clearTimeout(timer);
-    res.status(e && e.name === 'AbortError' ? 504 : 502).json({ error: 'Recording fetch failed' });
+    res.status(e && e.name === 'AbortError' ? 504 : 502).json({ error: 'Recording fetch failed', detail: String(e && e.message || '') });
   }
 });
 
