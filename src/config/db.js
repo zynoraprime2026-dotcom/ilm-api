@@ -19,6 +19,11 @@ const pool = new Pool({
   keepAlive: true,
   keepAliveInitialDelayMillis: 10000,
   ssl: sslOpt,
+  // A query that never returns is worse than one that errors: it holds a pool
+  // slot and the HTTP request until the function times out. Let Postgres cancel
+  // it instead, then guards.js turns that into a 504 with a reason.
+  statement_timeout: parseInt(process.env.PG_STATEMENT_TIMEOUT_MS, 10) || 15000,
+  query_timeout: parseInt(process.env.PG_QUERY_TIMEOUT_MS, 10) || 20000,
 });
 
 // Serverless Postgres (Neon) suspends compute and drops idle sockets; the pool

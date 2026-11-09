@@ -17,7 +17,8 @@
     "seed:fiqh": "node scripts/seedFiqh.cjs",
     "seed:reciters": "node scripts/seedReciters.cjs",
     "seed:duas": "node scripts/seedDuas.cjs",
-    "migrate": "node scripts/migrate.cjs"
+    "migrate": "node scripts/migrate.cjs",
+    "test:guards": "node tests/guards.test.cjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",

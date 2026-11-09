@@ -9,6 +9,7 @@ const { stripBomDeep } = require('./lib/sanitize');
 const compression = require('compression');
 
 const apiKeyAuth = require('./middleware/apiKeyAuth');
+const { wrapAsyncHandlers, responseTimeout, errorHandler } = require('./lib/guards');
 const quranRoutes = require('./routes/quran');
 const hadithRoutes = require('./routes/hadith');
 const hadithAudioRoutes = require('./routes/hadithAudio');
@@ -28,6 +29,10 @@ const developersRoutes = require('./routes/developers');
 const path = require('path');
 
 const app = express();
+
+// A request must always answer: see src/lib/guards.js for why silence is the
+// worst failure mode this service has.
+app.use(responseTimeout());
 
 app.use(helmet({
   contentSecurityPolicy: {
@@ -286,7 +291,8 @@ app.use('/v1/dictionary', dictionaryRoutes);
 // are rejected server-side, and the global per-IP rate limit still applies.
 // A keyless, key-free mirror of the endpoints the app actually uses.
 const ALLOWED_WEB_ORIGINS = [
-  'https://zynoraprime2026-dotcom.github.io',
+  'https://zynoraprime2026-dotcom.github.io', // GitHub Pages build of Ilm Daily
+  'https://ilm-daily.vercel.app',             // the same app, served by Vercel
   'http://localhost',
   'http://127.0.0.1',
 ];
@@ -317,5 +323,11 @@ app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(500).json({ error: 'Something went wrong' });
 });
+
+// Everything is mounted by here: make rejected async handlers reach the error
+// handler instead of parking the request until the function times out.
+wrapAsyncHandlers(app);
+
+app.use(errorHandler);
 
 module.exports = app;
