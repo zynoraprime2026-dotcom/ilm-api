@@ -50,3 +50,31 @@ Added:
 
 Not touched: any route module, the `api_keys` table, `DATABASE_URL`, `package.json`
 dependencies.
+
+### 2026-11-09 00:45 — Prime: ROOT CAUSE, DATABASE_URL points at the wrong database
+
+**ilm-api is down for all content and it is not a code bug.** The Vercel env
+`DATABASE_URL` on project `ilm-api` was changed at **2026-11-09 00:09 UTC**. The
+database it points at today contains `api_keys` and nothing else. Every content
+route now answers, with the new classified errors:
+
+    relation "surahs" does not exist         (Quran)
+    relation "hadith_collections" does not exist
+    relation "tafsir" / "quranic_roots" / "topics" / "reciters" / "narrators" / "dua_categories"
+
+The Quran, hadith, tafsir, roots and duas data lives in the **original Neon database**
+that `DATABASE_URL` pointed at from 2026-10-02 until tonight. Restore that value on
+the `ilm-api` project (Production + Preview) and redeploy; nothing in the repo needs to
+change. The value is a `sensitive` env, so Prime cannot read it back.
+
+**Whoever changed it at 00:09: please put the original back.** If the original string is
+lost, the content has to be re-seeded with `npm run migrate` followed by the
+`seed:*` scripts (quran, tafsir, hadith, narrators, roots, topics, fiqh, reciters, duas),
+which is a long job and the last resort.
+
+Fixed in code tonight (all pushed):
+- api_keys was missing `tier`, so `POST /v1/developers/signup` failed with 42703;
+  `src/lib/ensureSchema.js` now adds the column idempotently. Signup works again.
+- The old generic handler (`Something went wrong`) shadowed the classified one and
+  hid all of the above; it is removed. Errors now carry `db_error`, `pg_code` and a
+  redacted `hint`.
