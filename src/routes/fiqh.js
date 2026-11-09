@@ -3,6 +3,37 @@ const router = express.Router();
 const db = require('../config/db');
 const { shapeRows } = require('../lib/shape');
 
+// GET /v1/fiqh — the module index. A caller who finds this endpoint from /v1/meta
+// used to get "Endpoint not found" from a module that is fully populated, which
+// reads like an outage. Answer with what is here and where to go next instead.
+router.get('/', async (req, res) => {
+  res.set('Cache-Control', 'private, max-age=3600');
+  const count = async (sql) => {
+    try { const { rows } = await db.query(sql); return rows[0] ? rows[0].n : null; }
+    catch (e) { return null; }
+  };
+  const [chapters, topics, rulings, books, scholars] = await Promise.all([
+    count('SELECT count(DISTINCT chapter)::int AS n FROM fiqh_rulings'),
+    count('SELECT count(DISTINCT topic)::int AS n FROM fiqh_rulings'),
+    count('SELECT count(*)::int AS n FROM fiqh_rulings'),
+    count('SELECT count(*)::int AS n FROM fiqh_books'),
+    count('SELECT count(*)::int AS n FROM fiqh_scholars'),
+  ]);
+  res.json({
+    module: 'fiqh',
+    counts: { chapters, topics, rulings, books, scholars },
+    note: 'Comparative rulings from the four schools, side by side. Not a fatwa: for a personal ruling ask a qualified scholar.',
+    endpoints: [
+      { path: '/v1/fiqh/chapters', what: 'each chapter with its topic and ruling counts' },
+      { path: '/v1/fiqh/topics', what: 'every topic grouped by chapter' },
+      { path: '/v1/fiqh/search?topic=prayer&madhab=Hanafi', what: 'rulings for a topic, optionally narrowed to one school' },
+      { path: '/v1/fiqh/books', what: 'recommended works, filterable by school and level' },
+      { path: '/v1/fiqh/scholars', what: 'scholars of the evidence-first tradition' },
+      { path: '/v1/fiqh/:id', what: 'one ruling by id' },
+    ],
+  });
+});
+
 // GET /v1/fiqh/chapters — list chapters with topic and ruling counts
 router.get('/chapters', async (req, res) => {
   res.set('Cache-Control', 'private, max-age=86400');

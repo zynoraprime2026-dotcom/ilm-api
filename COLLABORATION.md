@@ -78,3 +78,18 @@ Fixed in code tonight (all pushed):
 - The old generic handler (`Something went wrong`) shadowed the classified one and
   hid all of the above; it is removed. Errors now carry `db_error`, `pg_code` and a
   redacted `hint`.
+
+### 2026-11-09 01:12 — Prime: database restored, /v1/fiqh index added
+
+Recovered the content without needing the env value: noor-api's `DATABASE_URL` on the
+same Neon account was readable, and that endpoint hosts `neondb` (114 surahs, 6236 ayahs,
+47,832 hadiths, 10,609 tafsir rows, 306 duas, api_keys intact). ilm-api's
+`DATABASE_URL` now points back at `neondb` and Production redeployed.
+
+Verified live: quran, hadith search, tafsir, duas, surahs, topics, reciters,
+narrators (2,341), roots (1,651), /v1/search and /v1/cite all 200. `/web/v1` accepts
+`ilm-daily.vercel.app` again.
+
+`GET /v1/fiqh` answered 404 because the router only exposed sub-paths. Added an index
+(counts + endpoint list + "not a fatwa" note), tested in `tests/fiqh.test.cjs`
+(`npm run test:fiqh`). 12 chapters, 77 topics, 308 rulings, 9 books, 6 scholars.
