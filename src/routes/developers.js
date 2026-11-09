@@ -40,7 +40,7 @@ router.post('/signup', async (req, res) => {
   } catch (err) {
     console.error('Developer signup error:', err && (err.code || err.message));
     const c = classify(err);
-    res.status(c.status === 500 ? 500 : c.status).json({ error: 'Internal server error during signup', db_error: c.db_error });
+    res.status(c.status === 500 ? 500 : c.status).json({ error: 'Internal server error during signup', db_error: c.db_error, pg_code: (err && err.code) || null, hint: String((err && err.message) || '').replace(/postgres(ql)?:\/\/\S+/gi, '[redacted]').slice(0, 140) });
   }
 });
 
