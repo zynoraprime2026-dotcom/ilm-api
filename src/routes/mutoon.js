@@ -12,18 +12,20 @@ const AUDIO_BASE = String(process.env.MUTOON_AUDIO_BASE || '').replace(/\/+$/, '
 // is worse than saying it is not loaded yet.
 const LINES = {}; // slug -> { lines, source }, read-through cache
 
-function withAudio(m) {
+function withAudio(m, baseUrl) {
   const ingested = Boolean(LINES[m.slug] && LINES[m.slug].lines && LINES[m.slug].lines.length);
   const matnAudio = m.audio && m.audio.url ? m.audio : null;
   // Per-line audio is richer (a learner can loop one verse) but needs a bucket.
   // Whole-matn audio is what we can verify today, so serve it rather than 503.
   const kind = AUDIO_BASE && ingested ? 'line' : matnAudio ? 'matn' : null;
+  const tier = String(baseUrl || '/v1/mutoon').replace(/\/+$/, '');
   return {
     ...m,
     ingested,
     audio_kind: kind,
     audio_available: Boolean(kind),
-    audio_url: kind === 'line' ? `${AUDIO_BASE}/${m.slug}/1.mp3` : (matnAudio ? `${API_BASE}/v1/mutoon/${m.slug}/stream` : null),
+    audio_url: kind === 'line' ? `${AUDIO_BASE}/${m.slug}/1.mp3` : (matnAudio ? `${API_BASE}${tier}/${m.slug}/stream` : null),
+    audio_download_url: kind === 'line' ? null : (matnAudio ? `${API_BASE}${tier}/${m.slug}/stream?download=1` : null),
     audio_url_template: kind === 'line' ? `${AUDIO_BASE}/${m.slug}/{line}.mp3` : null,
   };
 }
@@ -31,7 +33,7 @@ function withAudio(m) {
 router.get('/', (req, res) => {
   const field = req.query.field ? String(req.query.field) : null;
   const level = req.query.level ? String(req.query.level) : null;
-  let rows = MUTOON.map(withAudio);
+  let rows = MUTOON.map((m) => withAudio(m, req.baseUrl));
   if (field) rows = rows.filter((m) => m.field === field || m.field.startsWith(field + '-'));
   if (level) rows = rows.filter((m) => m.level === level);
   res.json({
@@ -110,6 +112,11 @@ router.get('/:slug/stream', async (req, res) => {
       if (v) res.set(h, v);
     }
     if (!up.headers.get('accept-ranges')) res.set('Accept-Ranges', 'bytes');
+    // Named attachment when asked, inline otherwise, so both listening and saving
+    // work from the same endpoint.
+    const fname = `${m.slug}.mp3`;
+    const disp = String(req.query.download || '') === '1' ? 'attachment' : 'inline';
+    res.set('Content-Disposition', `${disp}; filename="${fname}"`);
     res.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
     if (!up.body) return res.end();
     const { Readable } = require('stream');
@@ -123,7 +130,7 @@ router.get('/:slug/stream', async (req, res) => {
 router.get('/:slug', (req, res, next) => {
   const m = MUTOON.find((x) => x.slug === req.params.slug);
   if (!m) return next(); // fall through to the generic 404 handler
-  res.json(withAudio(m));
+  res.json(withAudio(m, req.baseUrl));
 });
 
 router.get('/:slug/lines', async (req, res) => {
