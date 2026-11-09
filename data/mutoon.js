@@ -18,6 +18,19 @@ const MUTOON = [
     form: 'prose',
     verses: null,
     note: 'The standard first text in Arabic grammar; every madrasa path starts here.',
+    // Verified 2026-11-09: 200, audio/mpeg, 6.75 MB. A full recording of the matn,
+    // not per-line, so a client seeks with the audio element's currentTime rather
+    // than fetching a file per line. Speaker attribution on the archive item is
+    // unclear, so it is null rather than guessed.
+    audio: {
+      kind: 'matn',
+      url: 'https://archive.org/download/Ajromi-Yousfi/000-Ajurom-Shydhmi-mp3.mp3',
+      source: 'Internet Archive, item Ajromi-Yousfi',
+      speaker: null,
+      license: null,
+      verified_at: '2026-11-09',
+      bytes: 6752107,
+    },
   },
   {
     slug: 'alfiyyat-ibn-malik',

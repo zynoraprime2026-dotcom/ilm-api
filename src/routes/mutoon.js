@@ -14,11 +14,17 @@ const LINES = {}; // slug -> { lines, source }, read-through cache
 
 function withAudio(m) {
   const ingested = Boolean(LINES[m.slug] && LINES[m.slug].lines && LINES[m.slug].lines.length);
+  const matnAudio = m.audio && m.audio.url ? m.audio : null;
+  // Per-line audio is richer (a learner can loop one verse) but needs a bucket.
+  // Whole-matn audio is what we can verify today, so serve it rather than 503.
+  const kind = AUDIO_BASE && ingested ? 'line' : matnAudio ? 'matn' : null;
   return {
     ...m,
     ingested,
-    audio_available: Boolean(AUDIO_BASE && ingested),
-    audio_url_template: AUDIO_BASE ? `${AUDIO_BASE}/${m.slug}/{line}.mp3` : null,
+    audio_kind: kind,
+    audio_available: Boolean(kind),
+    audio_url: kind === 'line' ? `${AUDIO_BASE}/${m.slug}/1.mp3` : (matnAudio ? matnAudio.url : null),
+    audio_url_template: kind === 'line' ? `${AUDIO_BASE}/${m.slug}/{line}.mp3` : null,
   };
 }
 
@@ -104,19 +110,37 @@ router.get('/:slug/lines', async (req, res) => {
   });
 });
 
+router.get('/:slug/audio', (req, res) => {
+  const m = MUTOON.find((x) => x.slug === req.params.slug);
+  if (!m) return res.status(404).json({ error: `Unknown matn: ${req.params.slug}` });
+  if (m.audio && m.audio.url) return res.redirect(302, m.audio.url);
+  return res.status(503).json({
+    error: 'Audio not configured',
+    slug: m.slug,
+    hint: 'Set MUTOON_AUDIO_BASE for per-line files ({slug}/{line}.mp3), or add a verified whole-matn url to data/mutoon.js.',
+  });
+});
+
 router.get('/:slug/audio/:line', (req, res) => {
   const m = MUTOON.find((x) => x.slug === req.params.slug);
   if (!m) return res.status(404).json({ error: `Unknown matn: ${req.params.slug}` });
   const line = parseInt(req.params.line, 10);
   if (!Number.isFinite(line) || line < 1) return res.status(400).json({ error: 'Line must be a positive number' });
-  if (!AUDIO_BASE) {
-    return res.status(503).json({
-      error: 'Audio not configured',
-      slug: m.slug,
-      hint: 'Set MUTOON_AUDIO_BASE to the bucket root, laid out as {slug}/{line}.mp3, and this endpoint redirects to it.',
-    });
+
+  if (AUDIO_BASE) return res.redirect(302, `${AUDIO_BASE}/${m.slug}/${line}.mp3`);
+
+  // No bucket yet: hand back the whole recording rather than an error, and say so
+  // in headers so a client knows line seeking is its own job.
+  if (m.audio && m.audio.url) {
+    res.set('X-Audio-Kind', 'matn');
+    res.set('X-Audio-Line-Ignored', String(line));
+    return res.redirect(302, m.audio.url);
   }
-  res.redirect(302, `${AUDIO_BASE}/${m.slug}/${line}.mp3`);
+  return res.status(503).json({
+    error: 'Audio not configured',
+    slug: m.slug,
+    hint: 'Set MUTOON_AUDIO_BASE to the bucket root, laid out as {slug}/{line}.mp3, and this endpoint redirects to it.',
+  });
 });
 
 module.exports = router;
