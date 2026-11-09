@@ -66,6 +66,8 @@ const ENDPOINTS = [
   'GET /v1/mutoon/paths (the order a student walks)',
   'GET /v1/mutoon/:slug (one matn: author, field, level, verses)',
   'GET /v1/mutoon/:slug/lines?from=&to= (verse lines, 409 until ingested)',
+  'GET /v1/mutoon/pdf-sources (downloadable editions and their provenance)',
+  'GET /v1/mutoon/:slug/pdf (the matn as a PDF, attachment)',
   'GET /v1/mutoon/audio-sources (provenance for every recording)',
   'GET /v1/mutoon/:slug/stream (audio with Range support, served by this API)',
   'GET /v1/mutoon/:slug/audio (302 to this API stream)',

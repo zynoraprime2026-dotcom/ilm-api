@@ -25,6 +25,8 @@ function withAudio(m, baseUrl) {
     audio_kind: kind,
     audio_available: Boolean(kind),
     audio_url: kind === 'line' ? `${AUDIO_BASE}/${m.slug}/1.mp3` : (matnAudio ? `${API_BASE}${tier}/${m.slug}/stream` : null),
+    pdf_available: !!pdfFor(m.slug),
+    pdf_url: pdfFor(m.slug) ? `${API_BASE}${tier}/${m.slug}/pdf` : null,
     audio_download_url: kind === 'line' ? null : (matnAudio ? `${API_BASE}${tier}/${m.slug}/stream?download=1` : null),
     audio_url_template: kind === 'line' ? `${AUDIO_BASE}/${m.slug}/{line}.mp3` : null,
   };
@@ -53,6 +55,7 @@ router.get('/paths', (req, res) => {
   res.json({ count: byPath.length, paths: byPath });
 });
 
+const { pdfFor, MUTOON_PDFS } = require('../lib/mutoonPdfs');
 const API_BASE = String(process.env.API_BASE_URL || 'https://ilm-api.vercel.app').replace(/\/+$/, '');
 
 // Audio provenance in one place, so a bad source can be pulled without shipping a
@@ -80,6 +83,68 @@ router.get('/audio-sources', (req, res) => {
     note: 'Playback goes through /v1/mutoon/{slug}/stream on this API; upstream hosts are listed for attribution only.',
     sources: rows,
   });
+});
+
+router.get('/pdf-sources', (req, res) => {
+  const rows = MUTOON.filter((m) => MUTOON_PDFS[m.slug]).map((m) => {
+    const p = pdfFor(m.slug);
+    return {
+      slug: m.slug,
+      title_english: m.title_english,
+      bytes: p.bytes,
+      source: p.source,
+      source_item: p.source_item,
+      licence: p.licence,
+      download_url: `${API_BASE}/v1/mutoon/${m.slug}/pdf`,
+    };
+  });
+  res.json({
+    count: rows.length,
+    note: 'Printed editions of the mutoon as downloadable PDFs. Credit the source on download; the archive item states no licence.',
+    sources: rows,
+  });
+});
+
+// The edition as a file: recognised by slug, saved with a readable name, so a
+// student can keep the matn offline instead of printing from a viewer.
+router.get('/:slug/pdf', async (req, res) => {
+  const m = MUTOON.find((x) => x.slug === req.params.slug);
+  if (!m) return res.status(404).json({ error: `Unknown matn: ${req.params.slug}` });
+  const p = pdfFor(m.slug);
+  if (!p) {
+    return res.status(503).json({
+      error: 'No PDF for this matn',
+      slug: m.slug,
+      hint: 'Only the matns published as PDFs in the source collection are available. See /v1/mutoon/pdf-sources.',
+    });
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 30000);
+  try {
+    const headers = {};
+    if (req.headers.range) headers.Range = req.headers.range;
+    const up = await fetch(p.upstream, { headers, signal: controller.signal });
+    clearTimeout(timer);
+    if (!up.ok && up.status !== 206) {
+      return res.status(502).json({ error: 'PDF host unavailable', upstream_status: up.status });
+    }
+    res.status(up.status === 206 ? 206 : 200);
+    res.set('Content-Type', 'application/pdf');
+    for (const h of ['content-length', 'content-range']) {
+      const v = up.headers.get(h);
+      if (v) res.set(h, v);
+    }
+    res.set('Accept-Ranges', 'bytes');
+    const inline = String(req.query.inline || '') === '1';
+    res.set('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename="${m.slug}.pdf"`);
+    res.set('Cache-Control', 'public, max-age=86400, stale-while-revalidate=604800');
+    if (!up.body) return res.end();
+    const { Readable } = require('stream');
+    Readable.fromWeb(up.body).on('error', () => res.end()).pipe(res);
+  } catch (e) {
+    clearTimeout(timer);
+    res.status(e && e.name === 'AbortError' ? 504 : 502).json({ error: 'PDF fetch failed' });
+  }
 });
 
 // Streams the recording with Range support so a phone can seek without pulling the
