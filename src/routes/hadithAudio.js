@@ -118,7 +118,8 @@ router.get('/:collection/:number.mp3', async (req, res) => {
         WHERE c.slug = $1 AND h.hadith_number = $2`,
       [collection, number]
     );
-    if (src.rows.length && !String(src.rows[0].text_arabic || '').trim()) {
+    if (src.rows.length === 0) return res.status(404).json({ error: 'Hadith not found' });
+    if (!String(src.rows[0].text_arabic || '').trim()) {
       return res.status(404).json({ error: 'No Arabic text for this narration', text_available: false });
     }
   } catch (e) { /* fall through */ }
@@ -147,9 +148,9 @@ router.get('/:collection/:number', async (req, res) => {
   const collection = String(req.params.collection || '').replace(/[^a-z0-9-]/gi, '');
   const number = decodeURIComponent(String(req.params.number || '')).slice(0, 40);
   if (!collection || !number) return res.status(400).json({ error: 'collection and number are required' });
-  // 375 records in the upstream edition carry no text at all. Answering "tts: true"
-  // for those told the app to speak an empty string, so a narration with nothing to
-  // read now says so instead.
+  // A narration with no text cannot be read aloud; one that does not exist at all
+  // is a different answer. Both used to fall through to "tts: true", which told the
+  // app to speak an empty string.
   try {
     const src = await db.query(
       `SELECT h.text_arabic FROM hadiths h
@@ -157,7 +158,10 @@ router.get('/:collection/:number', async (req, res) => {
         WHERE c.slug = $1 AND h.hadith_number = $2`,
       [collection, number]
     );
-    if (src.rows.length && !String(src.rows[0].text_arabic || '').trim()) {
+    if (src.rows.length === 0) {
+      return res.status(404).json({ error: 'Hadith not found', collection, number });
+    }
+    if (!String(src.rows[0].text_arabic || '').trim()) {
       return res.status(404).json({
         error: 'No Arabic text for this narration, so there is nothing to read aloud',
         collection, number, text_available: false,
