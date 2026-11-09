@@ -323,7 +323,7 @@ const { ENDPOINTS } = require('./lib/endpoints');
     const m = String(raw).match(/^(GET|POST|PUT|PATCH|DELETE)\s+(\S+)/);
     if (!m) continue;
     const method = m[1].toLowerCase();
-    const bare = m[2];
+    const bare = m[2].split('?')[0]; // registry entries carry query hints
     const path = toOpenApiPath(bare);
     const note = String(raw).slice(m[0].length).trim();
     if (!spec.paths[path]) spec.paths[path] = {};

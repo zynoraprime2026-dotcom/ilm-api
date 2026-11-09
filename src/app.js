@@ -10,6 +10,7 @@ const { ENDPOINTS } = require('./lib/endpoints');
 const statusRoutes = require('./routes/status');
 const usageRoutes = require('./routes/usage');
 const sourcesRoutes = require('./routes/sources');
+const mutoonRoutes = require('./routes/mutoon');
 const immutableCache = require('./middleware/immutableCache');
 const compression = require('compression');
 
@@ -221,6 +222,7 @@ app.use('/v1/status', immutableCache);
 app.use('/v1', immutableCache);
 app.use('/v1/usage', usageRoutes);
 app.use('/v1/sources', sourcesRoutes);
+app.use('/v1/mutoon', mutoonRoutes);
 
 // Scripture text is immutable, so let the CDN hold it instead of Neon.
 // Routes may override this with their own Cache-Control.

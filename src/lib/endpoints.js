@@ -62,6 +62,11 @@ const ENDPOINTS = [
   'GET /v1/status (public: database health, row counts and uptime)',
   'GET /v1/usage (your tier, minute burst, daily budget and resets)',
   'GET /v1/sources (provenance, edition and review state for every text)',
+  'GET /v1/mutoon (classical primers with study paths)',
+  'GET /v1/mutoon/paths (the order a student walks)',
+  'GET /v1/mutoon/:slug (one matn: author, field, level, verses)',
+  'GET /v1/mutoon/:slug/lines?from=&to= (verse lines, 409 until ingested)',
+  'GET /v1/mutoon/:slug/audio/:line (302 to configured audio, 503 if unset)',
 ];
 
 module.exports = { ENDPOINTS };
