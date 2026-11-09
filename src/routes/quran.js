@@ -328,22 +328,85 @@ router.get('/:surah/:ayah/cite', async (req, res) => {
 });
 
 // GET /v1/quran/:surah/:ayah/audio?reciter=alafasy — recitation audio URL
+// Reciters are addressed by slug, but callers arrive with "ar.alafasy", a display
+// name, or a capitalised variant, and a 404 there reads as "this recitation does
+// not exist". Resolve loosely instead of refusing.
+async function resolveReciter(input) {
+  const raw = String(input || 'alafasy').trim();
+  const tries = [raw, raw.split('.').pop()];
+  for (const t of tries) {
+    const r = await db.query('SELECT * FROM reciters WHERE slug = $1', [String(t).toLowerCase()]);
+    if (r.rows.length) return r.rows[0];
+  }
+  const all = await db.query('SELECT * FROM reciters');
+  const n = (x) => String(x).toLowerCase().replace(/[^a-z]/g, '');
+  const want = n(raw);
+  return (
+    all.rows.find((r) => n(r.slug) === want) ||
+    all.rows.find((r) => n(r.name).includes(want)) ||
+    all.rows.find((r) => want.includes(n(r.slug))) ||
+    null
+  );
+}
+
+// Recitation audio. Without a flag this answers with the source URL, which is what
+// existing clients expect. With ?stream=1 it proxies the bytes, and with
+// ?download=1 it proves them as an attachment named after the ayah: browsers
+// ignore a download attribute on a cross-origin clip, so a client that never
+// leaves this API is the only way saving actually works.
 router.get('/:surah/:ayah/audio', async (req, res) => {
   const surahNum = parseInt(req.params.surah, 10);
   const ayahNum = parseInt(req.params.ayah, 10);
-  const reciterSlug = req.query.reciter || 'alafasy';
-
-  const reciterResult = await db.query('SELECT * FROM reciters WHERE slug = $1', [reciterSlug]);
-  if (reciterResult.rows.length === 0) {
-    return res.status(404).json({ error: `Reciter "${reciterSlug}" not found. See /v1/reciters for available options.` });
+  const reciter = await resolveReciter(req.query.reciter);
+  if (!reciter) {
+    return res.status(404).json({
+      error: `Reciter "${req.query.reciter || 'alafasy'}" not found. See /v1/reciters for available options.`,
+    });
   }
-  const reciter = reciterResult.rows[0];
 
   // everyayah.com filename pattern: SSSAAA.mp3 (surah/ayah zero-padded to 3 digits)
   const fileName = `${String(surahNum).padStart(3, '0')}${String(ayahNum).padStart(3, '0')}.mp3`;
   const audioUrl = `${reciter.audio_base_url}${fileName}`;
+  const wantsBytes = req.query.stream === '1' || req.query.download === '1';
 
-  res.json({ surah: surahNum, ayah: ayahNum, reciter: reciter.name, audio_url: audioUrl });
+  if (!wantsBytes) {
+    return res.json({ surah: surahNum, ayah: ayahNum, reciter: reciter.name, audio_url: audioUrl });
+  }
+
+  let lastErr = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 25000);
+    try {
+      const headers = {};
+      if (req.headers.range) headers.Range = req.headers.range;
+      const up = await fetch(audioUrl, { headers, signal: controller.signal });
+      clearTimeout(timer);
+      if (!up.ok && up.status !== 206) {
+        lastErr = new Error('upstream ' + up.status);
+        if (attempt === 0) continue;
+        return res.status(502).json({ error: 'Recitation host unavailable', upstream_status: up.status });
+      }
+      res.status(up.status === 206 ? 206 : 200);
+      res.set('Content-Type', up.headers.get('content-type') || 'audio/mpeg');
+      for (const h of ['content-length', 'content-range']) {
+        const v = up.headers.get(h);
+        if (v) res.set(h, v);
+      }
+      res.set('Accept-Ranges', 'bytes');
+      const disp = req.query.download === '1' ? 'attachment' : 'inline';
+      res.set('Content-Disposition', `${disp}; filename="${surahNum}-${ayahNum}-${reciter.slug}.mp3"`);
+      res.set('Cache-Control', 'public, max-age=604800, stale-while-revalidate=2592000');
+      if (!up.body) return res.end();
+      const { Readable } = require('stream');
+      Readable.fromWeb(up.body).on('error', () => res.end()).pipe(res);
+      return;
+    } catch (e) {
+      clearTimeout(timer);
+      lastErr = e;
+    }
+  }
+  res.status(502).json({ error: 'Recitation fetch failed', detail: String(lastErr && lastErr.message || '') });
 });
 
 module.exports = router;
