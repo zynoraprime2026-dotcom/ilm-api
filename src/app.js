@@ -277,6 +277,7 @@ app.use('/web/v1/alarm', alarmRoutes);
 app.use('/web/v1/quran', quranRoutes);
 app.use('/web/v1/tafsir', tafsirRoutes);
 app.use('/web/v1/hadith', hadithRoutes);
+app.use('/web/v1/mutoon', mutoonRoutes);
 app.use('/web/v1/hadith-audio', hadithAudioRoutes);
 app.use('/web/v1/duas', duasRoutes);
 app.use('/web/v1/dictionary', dictionaryRoutes);
