@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const crypto = require('crypto');
 const db = require('../config/db');
+const { classify } = require('../lib/guards');
 
 function generateApiKey() {
   return 'ilm_' + crypto.randomBytes(24).toString('hex');
@@ -37,8 +38,9 @@ router.post('/signup', async (req, res) => {
       ...result.rows[0],
     });
   } catch (err) {
-    console.error('Developer signup error:', err);
-    res.status(500).json({ error: 'Internal server error during signup' });
+    console.error('Developer signup error:', err && (err.code || err.message));
+    const c = classify(err);
+    res.status(c.status === 500 ? 500 : c.status).json({ error: 'Internal server error during signup', db_error: c.db_error });
   }
 });
 

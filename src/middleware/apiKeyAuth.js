@@ -1,4 +1,5 @@
 const db = require('../config/db');
+const { classify } = require('../lib/guards');
 
 // Simple API key check — expects header: x-api-key
 // Public endpoints (docs, health) should skip this middleware.
@@ -24,8 +25,9 @@ async function apiKeyAuth(req, res, next) {
     req.apiClient = rows[0];
     next();
   } catch (err) {
-    console.error('API key auth error:', err);
-    res.status(500).json({ error: 'Internal server error during authentication' });
+    console.error('API key auth error:', err && (err.code || err.message));
+    const c = classify(err);
+    res.status(c.status).json({ error: 'Internal server error during authentication', db_error: c.db_error });
   }
 }
 
