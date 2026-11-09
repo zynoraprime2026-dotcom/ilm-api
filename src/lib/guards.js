@@ -92,6 +92,12 @@ function errorHandler(err, req, res, next) {
   if (res.headersSent) return next(err);
   const body = { error };
   if (db_error) body.db_error = db_error;
+  // Short, redacted cause so a failing route can be diagnosed from the outside.
+  // Never echoes connection strings; message is clipped.
+  if (status >= 500) {
+    body.pg_code = (err && err.code) || null;
+    body.hint = String((err && err.message) || '').replace(/postgres(ql)?:\/\/\S+/gi, '[redacted]').slice(0, 140);
+  }
   res.status(status).json(body);
 }
 

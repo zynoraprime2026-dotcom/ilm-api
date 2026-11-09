@@ -321,12 +321,6 @@ app.use('/web/v1/roots', rootsRoutes);
 // 404 handler
 app.use((req, res) => res.status(404).json({ error: 'Endpoint not found' }));
 
-// Global error handler
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({ error: 'Something went wrong' });
-});
-
 // Everything is mounted by here: make rejected async handlers reach the error
 // handler instead of parking the request until the function times out.
 wrapAsyncHandlers(app);
