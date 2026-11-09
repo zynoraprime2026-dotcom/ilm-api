@@ -1,0 +1,20 @@
+{
+  "name": "ilm-api",
+  "version": "1.0.0",
+  "description": "Typed client for the Ilm API — Quran, hadith, tafsir, duas, fiqh and prayer data",
+  "keywords": ["quran", "hadith", "tafsir", "islamic", "api", "ilm"],
+  "license": "MIT",
+  "main": "./index.js",
+  "module": "./index.mjs",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.mjs",
+      "require": "./index.js"
+    }
+  },
+  "files": ["index.js", "index.mjs", "index.d.ts", "README.md"],
+  "engines": { "node": ">=18" },
+  "sideEffects": false
+}
