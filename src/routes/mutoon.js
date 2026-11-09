@@ -56,6 +56,7 @@ router.get('/paths', (req, res) => {
 });
 
 const { pdfFor, MUTOON_PDFS } = require('../lib/mutoonPdfs');
+const { PDF_CANDIDATES } = require('../lib/mutoonPdfCandidates');
 const API_BASE = String(process.env.API_BASE_URL || 'https://ilm-api.vercel.app').replace(/\/+$/, '');
 
 // Audio provenance in one place, so a bad source can be pulled without shipping a
@@ -82,6 +83,31 @@ router.get('/audio-sources', (req, res) => {
     count: rows.length,
     note: 'Playback goes through /v1/mutoon/{slug}/stream on this API; upstream hosts are listed for attribution only.',
     sources: rows,
+  });
+});
+
+// The waiting room for found-but-unverified editions: visible to whoever reviews
+// them, never advertised as a download in the catalogue.
+router.get('/pdf-candidates', (req, res) => {
+  const rows = Object.entries(PDF_CANDIDATES).map(([slug, c]) => {
+    const m = MUTOON.find((x) => x.slug === slug);
+    return {
+      slug,
+      title_english: m ? m.title_english : null,
+      identifier: c.identifier,
+      bytes: c.bytes,
+      check: c.check,
+      review_url: `https://archive.org/details/${c.identifier}`,
+      verified: false,
+      next_step: 'open the first page and confirm it is the matn itself',
+    };
+  });
+  const usable = rows.filter((r) => r.check === 'pdf-magic-ok').length;
+  res.json({
+    count: rows.length,
+    fetchable: usable,
+    note: 'Candidate editions awaiting review. Nothing here is downloadable through this API until it is confirmed and moved into the verified registry.',
+    candidates: rows,
   });
 });
 
