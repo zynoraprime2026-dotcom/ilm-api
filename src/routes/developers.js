@@ -3,6 +3,7 @@ const router = express.Router();
 const crypto = require('crypto');
 const db = require('../config/db');
 const { classify } = require('../lib/guards');
+const apiKeyAuth = require('../middleware/apiKeyAuth');
 
 function generateApiKey() {
   return 'ilm_' + crypto.randomBytes(24).toString('hex');
@@ -18,11 +19,17 @@ router.post('/signup', async (req, res) => {
   }
 
   try {
+    // Never return an existing key to an unauthenticated caller: knowing a
+    // developer's email would otherwise be enough to take over their key, their
+    // quota and any tier they paid for. The masked hint is enough to tell them
+    // which key they are looking for.
     const existing = await db.query('SELECT key, tier FROM api_keys WHERE owner_email = $1', [email]);
     if (existing.rows.length > 0) {
+      const k = String(existing.rows[0].key);
       return res.status(200).json({
-        message: 'An API key already exists for this email.',
-        key: existing.rows[0].key,
+        message: 'An API key already exists for this email. Use the key you saved; if it is lost, rotate it with POST /v1/developers/keys/rotate from a key-holder or contact the API owner.',
+        key_hint: `${k.slice(0, 8)}…${k.slice(-4)}`,
+        key: null,
         tier: existing.rows[0].tier,
       });
     }
@@ -45,5 +52,43 @@ router.post('/signup', async (req, res) => {
 });
 
 
+
+// POST /v1/developers/keys/rotate — authenticated by the key itself.
+// A leaked key needs a self-serve way out: rotating invalidates the old value
+// immediately while keeping the same row, tier and usage history.
+router.post('/keys/rotate', apiKeyAuth, async (req, res) => {
+  const oldKey = req.header('x-api-key');
+  try {
+    const key = generateApiKey();
+    const { rows } = await db.query(
+      `UPDATE api_keys SET key = $1 WHERE key = $2 RETURNING key, tier, created_at`,
+      [key, oldKey]
+    );
+    if (rows.length === 0) return res.status(403).json({ error: 'Invalid API key' });
+    res.json({
+      message: 'Key rotated. The previous key no longer works anywhere — update your clients.',
+      ...rows[0],
+    });
+  } catch (err) {
+    console.error('Key rotation error:', err && (err.code || err.message));
+    const c = classify(err);
+    res.status(500).json({ error: 'Internal server error during rotation', db_error: c.db_error });
+  }
+});
+
+// POST /v1/developers/keys/revoke — authenticated by the key itself.
+// Deletes the key outright, for when it is compromised or the developer is done.
+router.post('/keys/revoke', apiKeyAuth, async (req, res) => {
+  const key = req.header('x-api-key');
+  try {
+    const { rows } = await db.query('DELETE FROM api_keys WHERE key = $1 RETURNING owner_email', [key]);
+    if (rows.length === 0) return res.status(403).json({ error: 'Invalid API key' });
+    res.json({ message: 'Key revoked and deleted. Sign up again at POST /v1/developers/signup for a new one.' });
+  } catch (err) {
+    console.error('Key revoke error:', err && (err.code || err.message));
+    const c = classify(err);
+    res.status(500).json({ error: 'Internal server error during revoke', db_error: c.db_error });
+  }
+});
 
 module.exports = router;

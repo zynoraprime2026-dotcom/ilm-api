@@ -29,7 +29,7 @@ const spec = {
   info: {
     title: 'Ilm API',
     version: '1.6.0',
-    description: 'Islamic knowledge API: Quran with translations and tafsir, 34k+ bilingual hadith, duas, comparative fiqh, prayer times, Arabic dictionary and root search, manuscript records via Turath.',
+    description: 'Islamic knowledge API: Quran with translations and tafsir, 47k+ bilingual hadith across 16 collections, duas, comparative fiqh, prayer times, Arabic dictionary and root search, manuscript records via Turath.\n\nAuthenticate with the x-api-key header on every /v1 request. Free tier: 60 requests a minute, 2,000 a day; every response carries X-RateLimit-* headers and GET /v1/usage reports the budget. Sign up self-serve at POST /v1/developers/signup; rotate or revoke with POST /v1/developers/keys/rotate or /revoke.\n\nData note: numbers missing from a collection return 404 rather than an empty record. Where the edition this data was seeded from carried a placeholder instead of text, the segment was removed rather than shown blank, so a handful of printed numbers (375 of 47,457, mostly in Sahih Muslim) have no record here. Treat a 404 as absent, not broken.',
     contact: { name: 'Zynora AI', url: BASE },
   },
   servers: [{ url: BASE, description: 'Production' }],
@@ -189,6 +189,108 @@ const spec = {
         summary: 'Search hadith narrators by name, kunya or grade',
         parameters: [{ name: 'q', in: 'query', required: true, schema: { type: 'string' } }, common.limit],
         responses: { 200: { description: 'Narrator profiles' } },
+      },
+    },
+    '/v1/hadith/collections': {
+      get: {
+        summary: 'The hadith collections with live counts',
+        description: 'One row per collection: slug, name, narrator counts and how many narrations are currently readable. Use the slug in every other hadith path.',
+        responses: { 200: { description: 'Collections' } },
+      },
+    },
+    '/v1/hadith/{collection}/{number}': {
+      get: {
+        summary: 'One narration: Arabic, translation, grade, reference',
+        parameters: [
+          { name: 'collection', in: 'path', required: true, schema: { type: 'string' }, description: 'Collection slug from /v1/hadith/collections, e.g. bukhari' },
+          { name: 'number', in: 'path', required: true, schema: { type: 'string' }, description: 'Number as printed in the collection' },
+          common.language,
+        ],
+        responses: { 200: { description: 'Narration' }, 404: { description: 'No narration at that number. Whether a number exists in print and whether this edition carries it are not the same thing; see the note in the API description.' } },
+      },
+    },
+    '/v1/hadith/{collection}/{number}/isnad': {
+      get: {
+        summary: 'The chain of narration for one hadith',
+        description: 'Narrators in order with their grades where known, plus the compiler biography link.',
+        parameters: [
+          { name: 'collection', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'number', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: { 200: { description: 'Isnad chain' }, 404: { description: 'No chain recorded for that narration' } },
+      },
+    },
+    '/v1/hadith-audio/{collection}/{number}': {
+      get: {
+        summary: 'Recitation audio for one hadith',
+        description: 'Returns audio/mpeg bytes when a recitation exists. A narration that exists but carries no Arabic answers 404 with text_available: false, which is different from a number that does not exist at all.',
+        parameters: [
+          { name: 'collection', in: 'path', required: true, schema: { type: 'string' } },
+          { name: 'number', in: 'path', required: true, schema: { type: 'string' } },
+        ],
+        responses: { 200: { description: 'MP3 bytes', content: { 'audio/mpeg': {} } }, 404: { description: 'No audio or no Arabic text' } },
+      },
+    },
+    '/v1/quran/{surah}/{ayah}/words': {
+      get: {
+        summary: 'Word-by-word Arabic with transliteration, grammar and root',
+        parameters: [
+          { name: 'surah', in: 'path', required: true, schema: { type: 'integer' } },
+          { name: 'ayah', in: 'path', required: true, schema: { type: 'integer' } },
+        ],
+        responses: { 200: { description: 'Word segments' } },
+      },
+    },
+    '/v1/duas/categories': {
+      get: {
+        summary: 'Du’a categories, in the order a person needs them',
+        responses: { 200: { description: 'Categories' } },
+      },
+    },
+    '/v1/fiqh/topics': {
+      get: {
+        summary: 'Fiqh chapters and the topics answered under each',
+        responses: { 200: { description: 'Chapters and topics' } },
+      },
+    },
+    '/v1/stories/random': {
+      get: {
+        summary: 'A random prophetic story',
+        parameters: [{ name: 'part', in: 'query', schema: { type: 'integer' }, description: 'Return a specific part instead of a random one' }],
+        responses: { 200: { description: 'Story part' } },
+      },
+    },
+    '/v1/usage': {
+      get: {
+        summary: 'This key’s tier, budget and what it has spent',
+        description: 'Per-key, so it is never cached at the edge. Use it to pace yourself instead of discovering the limit through a 429.',
+        responses: { 200: { description: 'Usage' }, 401: { description: 'Missing key' } },
+      },
+    },
+    '/v1/developers/signup': {
+      post: {
+        summary: 'Get a free API key (self-serve, no approval)',
+        description: 'The key is returned once, on creation. If the email already has a key, no key is returned: only a masked hint, because handing an existing key to anyone who knows an address would hand over the account.',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', required: ['email'], properties: { email: { type: 'string', format: 'email' } } } } },
+        },
+        responses: { 201: { description: 'Key created' }, 200: { description: 'A key already exists for that email; key is null' }, 400: { description: 'Invalid email' } },
+        security: [],
+      },
+    },
+    '/v1/developers/keys/revoke': {
+      post: {
+        summary: 'Delete this key',
+        description: 'Authenticated by the key itself. For a compromised key or a project that is finished; sign up again for a new one.',
+        responses: { 200: { description: 'Deleted' }, 401: { description: 'Missing key' }, 403: { description: 'Unknown key' } },
+      },
+    },
+    '/v1/developers/keys/rotate': {
+      post: {
+        summary: 'Replace this key with a fresh one',
+        description: 'Authenticated by the key itself. The old value stops working immediately, and the row, tier and usage history are kept. This is the way out of a leaked key.',
+        responses: { 200: { description: 'New key' }, 401: { description: 'Missing key' }, 403: { description: 'Unknown key' } },
       },
     },
   },

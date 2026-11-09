@@ -20,7 +20,8 @@
     "migrate": "node scripts/migrate.cjs",
     "test:guards": "node tests/guards.test.cjs",
     "test:fiqh": "node tests/fiqh.test.cjs",
-    "purge:empty-hadiths": "node scripts/purgeEmptyHadiths.cjs"
+    "purge:empty-hadiths": "node scripts/purgeEmptyHadiths.cjs",
+    "test:public": "node tests/public-readiness.test.cjs"
   },
   "dependencies": {
     "@neondatabase/serverless": "^1.1.0",
