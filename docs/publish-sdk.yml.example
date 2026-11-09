@@ -1,0 +1,33 @@
+# Publishes the SDK in sdk/ to npm when a sdk-v* tag is pushed.
+# Requires one repository secret: NPM_TOKEN (an npm granular access token with
+# read+write on the package). Until that secret exists the job fails at the
+# publish step and nothing is released.
+name: publish-sdk
+on:
+  push:
+    tags: ['sdk-v*']
+  workflow_dispatch:
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      - name: Verify the package parses before anything leaves the building
+        run: |
+          node --check sdk/index.js
+          node -e "const p=require('./sdk/package.json'); if(!p.name||!p.version) process.exit(1);"
+      - name: Smoke test against production
+        env:
+          ILM_API_KEY: ${{ secrets.ILM_API_KEY }}
+        run: |
+          if [ -z "$ILM_API_KEY" ]; then echo "no ILM_API_KEY secret, skipping live smoke"; exit 0; fi
+          node sdk/example.js
+      - name: Publish
+        working-directory: sdk
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: npm publish --access public

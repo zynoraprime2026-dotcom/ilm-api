@@ -79,3 +79,26 @@ into a chat.
 - Definition of done for this incident: `/health` reports `db up`,
   `/v1/quran/1` returns 7 ayahs, and signup returns
   "An API key already exists" rather than 500.
+
+## Open: hadith totals disagree by 375
+
+`GET /v1/status` counts 47,457 rows in `hadiths`, while the per-collection totals
+summed from `GET /v1/hadith/:collection` come to 47,832. Two endpoints quoting
+different totals for the same data is a credibility problem, so it needs one
+query to settle:
+
+```sql
+select coalesce(c.slug,'(orphan)') as collection, count(*) as rows
+  from hadiths h left join hadith_collections c on c.id = h.collection_id
+ group by 1 order by 2 desc;
+```
+
+If the per-collection column sums to 47,457 then `/v1/status` is wrong. If it
+sums to 47,832 then some listing is counting a join rather than rows. Either way
+the fix belongs in one place, not two.
+
+## SDK release
+
+`sdk/` publishes as `ilm-api`. `.github/workflows/publish-sdk.yml` releases it on
+a `sdk-v*` tag once the repo has an `NPM_TOKEN` secret; without that secret the
+job stops at the publish step.
