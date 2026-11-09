@@ -10,6 +10,7 @@ const compression = require('compression');
 
 const apiKeyAuth = require('./middleware/apiKeyAuth');
 const { wrapAsyncHandlers, responseTimeout, errorHandler } = require('./lib/guards');
+const { schemaGuard } = require('./lib/ensureSchema');
 const quranRoutes = require('./routes/quran');
 const hadithRoutes = require('./routes/hadith');
 const hadithAudioRoutes = require('./routes/hadithAudio');
@@ -33,6 +34,8 @@ const app = express();
 // A request must always answer: see src/lib/guards.js for why silence is the
 // worst failure mode this service has.
 app.use(responseTimeout());
+app.use('/v1/developers', schemaGuard);
+app.use('/v1', schemaGuard);
 
 app.use(helmet({
   contentSecurityPolicy: {
