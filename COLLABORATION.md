@@ -116,3 +116,23 @@ Done instead:
 - `npm run purge:empty-hadiths` prints the 375 with a sample and deletes nothing
   without `--apply`. Not applied: removing rows from scripture records is the owner's
   call, not mine.
+
+### 2026-11-09 01:42 — Prime: owner authorised the purge; 375 placeholder rows removed
+
+Owner said "Purge". Backed up all 375 rows to `purged_empty_hadiths_backup.json` first,
+then deleted them from `neondb`:
+
+    muslim 7563 -> 7360 | nasai 5765 -> 5679 | tirmidhi 3998 -> 3926
+    bukhari 7589 -> 7580 | ibnmajah 4343 -> 4340 | abudawud 5274 -> 5272
+
+Zero rows with no text remain. Verified live: browse totals match the new counts and
+report `unavailable: 0`; the removed numbers answer `404 Hadith not found`; neighbouring
+hadiths (muslim 3, 4) intact; search unchanged (98 for "patience"); Bukhari 1 audio still
+streams 232KB of audio/mpeg.
+
+Audio now separates the two failure modes: a narration that does not exist is
+`404 Hadith not found`, one that exists without Arabic is `404 ... text_available:false`.
+
+Ilm Daily's bundles still carry the old 375 lines; the app filters them at render, so
+there is no user-visible difference. Regenerating `hadith/*.ndjson` would only save a few
+hundred KB, so it is not worth a re-download for every user.
