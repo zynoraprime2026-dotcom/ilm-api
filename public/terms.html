@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ilm API — Terms and acceptable use</title>
+<meta name="description" content="Terms and acceptable use for the Ilm API: what the data is, its limits, what counts as misuse, and how keys and addresses are handled." />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+<div class="wrap">
+  <div class="eyebrow">ILM API — TERMS</div>
+  <h1>Terms and acceptable use</h1>
+  <p class="lede">
+    Short, because this is a small service with one purpose: making Quran, hadith and Islamic
+    scholarship available to people building useful things. Using the API means accepting what is
+    below. Last updated 9 November 2026.
+  </p>
+
+  <h2>The data, honestly</h2>
+  <p>
+    The Quran text, translations, tafsir, hadith and fiqh material are scholarly works carried from
+    their published editions. They are reproduced for study and reference. They are not a fatwa, not
+    a substitute for a qualified teacher, and not infallible: translations in particular differ, and a
+    translation is never the Quran itself.
+  </p>
+  <p>
+    Not every printed number has a record here. Where the edition this data was seeded from carried a
+    placeholder instead of text, the segment was removed rather than shown blank, so 375 of 47,457
+    narrations (203 of them in Sahih Muslim) have no entry. A missing number answers 404. Treat that
+    as absent, not broken, and do not fill the gap with a narration from another edition: the
+    numbering will not match, and a wrong citation is worse than none.
+  </p>
+  <p>
+    When you publish something built on this data, cite it as it was returned: collection, number and
+    translator where given. Do not present generated or edited text as scripture.
+  </p>
+
+  <h2>Keys and limits</h2>
+  <p>
+    A free key allows 60 requests a minute and 2,000 a day, reported in the X-RateLimit headers and at
+    GET /v1/usage. One key is for one developer or one application: do not share a key between people,
+    and do not work around the limits by creating keys in bulk. Cache what you fetch; the content is
+    immutable and re-fetching it costs you quota and nothing else.
+  </p>
+  <p>
+    Your key is yours to protect. If it leaks, replace it immediately with
+    POST /v1/developers/keys/rotate using the key itself, or delete it with /keys/revoke. Lost keys are
+    emailed to the address on file by POST /v1/developers/keys/recover.
+  </p>
+
+  <h2>What counts as misuse</h2>
+  <p>
+    Do not resell the raw API or a wholesale mirror of it as your own product, and do not bulk-scrape
+    around the limits; if you need a full offline copy for research, ask, and we will find a sane way.
+    Do not misrepresent the output as a ruling, a scholar's verdict or an official position. Do not use
+    the API to harass, to incite, or to put words into the mouths of the sources. Do not attempt to
+    break authentication, and do not probe other keys or accounts.
+  </p>
+  <p>
+    A key that is abusing the service is revoked without notice. Everything else gets a conversation
+    first.
+  </p>
+
+  <h2>Your address</h2>
+  <p>
+    The email you sign up with is stored to issue your key and to send it to you if you lose it. It is
+    not sold, not used for marketing, and not shared. Nothing else about you is collected; there are no
+    tracking cookies on these pages.
+  </p>
+
+  <h2>Availability</h2>
+  <p>
+    The service is offered as it is, best effort, with no uptime guarantee and no liability for
+    decisions made from its data. It may change: endpoints can be added, corrected or retired as the
+    data improves. Breaking changes will be announced in the documentation rather than made silently.
+  </p>
+
+  <p style="margin-top:28px">
+    <a href="/docs" style="color:#C9A24B;">API documentation</a> &nbsp;·&nbsp;
+    <a href="/" style="color:#C9A24B;">Home</a>
+  </p>
+</div>
+</body>
+</html>

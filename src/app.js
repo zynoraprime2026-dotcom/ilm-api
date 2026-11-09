@@ -77,7 +77,12 @@ app.get(['/docs', '/v1/docs'], (req, res) => {
   res.type('html').send(`<!doctype html>
 <html><head><meta charset="utf-8"><title>Ilm API docs</title>
 <link rel="stylesheet" href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"></head>
-<body><div id="swagger-ui"></div>
+<body><div style="font:14px system-ui,-apple-system,Segoe UI,sans-serif;padding:14px 20px;border-bottom:1px solid #e7e7e3;display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+  <strong>Ilm API</strong>
+  <span style="color:#666">60 requests a minute, 2,000 a day on the free tier</span>
+  <a href="/terms" style="margin-left:auto;color:#8a6d1f">Terms &amp; acceptable use</a>
+  <a href="/" style="color:#8a6d1f">Home</a>
+</div><div id="swagger-ui"></div>
 <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
 <script>
   window.ui = SwaggerUIBundle({
@@ -91,6 +96,10 @@ app.get(['/docs', '/v1/docs'], (req, res) => {
 });
 
 app.use(express.static(path.join(__dirname, '..', 'public')));
+app.get('/terms', (req, res) => {
+  res.set('Cache-Control', 'public, s-maxage=3600');
+  res.sendFile(path.join(__dirname, '..', 'public', 'terms.html'));
+});
 app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'index.html')));
 
 // Public health check — no API key needed

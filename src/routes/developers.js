@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const db = require('../config/db');
 const { classify } = require('../lib/guards');
 const apiKeyAuth = require('../middleware/apiKeyAuth');
+const mailer = require('../lib/mailer');
 
 function generateApiKey() {
   return 'ilm_' + crypto.randomBytes(24).toString('hex');
@@ -40,9 +41,36 @@ router.post('/signup', async (req, res) => {
       [key, email]
     );
 
+    const created = result.rows[0];
+    // With a mailer configured the key goes to the address, not to whoever made
+    // the request: otherwise signing up with somebody else's email would hand
+    // the caller that person's key. Without one, the key is returned directly so
+    // the API still works out of the box.
+    if (mailer.available()) {
+      const mail = await mailer.send({ to: email, ...mailer.keyEmail({ key: created.key, tier: created.tier }) });
+      if (mail.sent) {
+        return res.status(201).json({
+          message: `Key created and emailed to ${email}. Include it as the x-api-key header on every /v1 request.`,
+          key: null,
+          emailed: true,
+          tier: created.tier,
+          created_at: created.created_at,
+        });
+      }
+      console.error('Signup mail failed:', mail.reason);
+      return res.status(201).json({
+        message: 'Key created but the email did not send. Use the key in this response and keep it safe, or call POST /v1/developers/keys/recover to have it sent again.',
+        key: created.key,
+        emailed: false,
+        tier: created.tier,
+        created_at: created.created_at,
+      });
+    }
+
     res.status(201).json({
-      message: 'API key created. Include it as the x-api-key header on every /v1 request.',
-      ...result.rows[0],
+      message: 'API key created. Include it as the x-api-key header on every /v1 request. Save it: email delivery is not configured, so this is the only time it is shown.',
+      ...created,
+      emailed: false,
     });
   } catch (err) {
     console.error('Developer signup error:', err && (err.code || err.message));
@@ -52,6 +80,42 @@ router.post('/signup', async (req, res) => {
 });
 
 
+
+// POST /v1/developers/keys/recover — { email } -> generic 200.
+// Someone who loses a key should not have to write to the owner. The reply is
+// identical whether or not the address is known, so this cannot be used to test
+// who has an account, and the key only ever goes to the address on file.
+const COOLDOWN_MS = Number(process.env.ILM_RECOVER_COOLDOWN_MS || 10 * 60 * 1000);
+const recentRecoveries = new Map();
+
+router.post('/keys/recover', async (req, res) => {
+  const { email } = req.body || {};
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return res.status(400).json({ error: 'A valid email is required' });
+  }
+  if (!mailer.available()) {
+    return res.status(503).json({ error: 'Email delivery is not configured on this API, so keys cannot be recovered automatically. Contact the API owner.' });
+  }
+
+  const generic = { message: 'If that address has a key, it has been emailed to it. Check the inbox and the spam folder.' };
+  const now = Date.now();
+  const last = recentRecoveries.get(email) || 0;
+  if (now - last < COOLDOWN_MS) return res.json(generic);
+
+  try {
+    const { rows } = await db.query('SELECT key, tier FROM api_keys WHERE owner_email = $1', [email]);
+    if (rows.length > 0) {
+      recentRecoveries.set(email, now);
+      const mail = await mailer.send({ to: email, ...mailer.keyEmail({ key: rows[0].key, tier: rows[0].tier }) });
+      if (!mail.sent) console.error('Recovery mail failed:', mail.reason);
+    }
+    res.json(generic);
+  } catch (err) {
+    console.error('Key recovery error:', err && (err.code || err.message));
+    // Still generic: a database problem must not become an account oracle.
+    res.json(generic);
+  }
+});
 
 // POST /v1/developers/keys/rotate — authenticated by the key itself.
 // A leaked key needs a self-serve way out: rotating invalidates the old value

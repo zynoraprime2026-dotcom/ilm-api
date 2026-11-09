@@ -28,7 +28,7 @@ const spec = {
   openapi: '3.0.3',
   info: {
     title: 'Ilm API',
-    version: '1.6.0',
+    version: '1.7.0',
     description: 'Islamic knowledge API: Quran with translations and tafsir, 47k+ bilingual hadith across 16 collections, duas, comparative fiqh, prayer times, Arabic dictionary and root search, manuscript records via Turath.\n\nAuthenticate with the x-api-key header on every /v1 request. Free tier: 60 requests a minute, 2,000 a day; every response carries X-RateLimit-* headers and GET /v1/usage reports the budget. Sign up self-serve at POST /v1/developers/signup; rotate or revoke with POST /v1/developers/keys/rotate or /revoke.\n\nData note: numbers missing from a collection return 404 rather than an empty record. Where the edition this data was seeded from carried a placeholder instead of text, the segment was removed rather than shown blank, so a handful of printed numbers (375 of 47,457, mostly in Sahih Muslim) have no record here. Treat a 404 as absent, not broken.',
     contact: { name: 'Zynora AI', url: BASE },
   },
@@ -270,7 +270,7 @@ const spec = {
     '/v1/developers/signup': {
       post: {
         summary: 'Get a free API key (self-serve, no approval)',
-        description: 'The key is returned once, on creation. If the email already has a key, no key is returned: only a masked hint, because handing an existing key to anyone who knows an address would hand over the account.',
+        description: 'Where a mailer is configured the key is emailed to the address and not returned in the response, so signing up with somebody else\u2019s email cannot yield their key; without a mailer it is returned once in the response. If the email already has a key, no key is returned at all: only a masked hint plus the recovery endpoint.',
         requestBody: {
           required: true,
           content: { 'application/json': { schema: { type: 'object', required: ['email'], properties: { email: { type: 'string', format: 'email' } } } } },
@@ -284,6 +284,18 @@ const spec = {
         summary: 'Delete this key',
         description: 'Authenticated by the key itself. For a compromised key or a project that is finished; sign up again for a new one.',
         responses: { 200: { description: 'Deleted' }, 401: { description: 'Missing key' }, 403: { description: 'Unknown key' } },
+      },
+    },
+    '/v1/developers/keys/recover': {
+      post: {
+        summary: 'Have your key emailed to you',
+        description: 'Answers the same way whether or not the address has a key, and only ever mails the address on file, so it cannot be used to discover who has an account. One email per address per ten minutes. Returns 503 if the API has no mailer configured.',
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', required: ['email'], properties: { email: { type: 'string', format: 'email' } } } } },
+        },
+        responses: { 200: { description: 'Generic acknowledgement' }, 400: { description: 'Invalid email' }, 503: { description: 'Email delivery not configured' } },
+        security: [],
       },
     },
     '/v1/developers/keys/rotate': {

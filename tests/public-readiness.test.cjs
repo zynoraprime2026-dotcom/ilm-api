@@ -31,9 +31,28 @@ require.cache[dbPath] = {
         const [gone] = rows.splice(i, 1);
         return { rows: [{ owner_email: gone.owner_email }] };
       }
+      if (/^INSERT INTO api_keys \(key, owner_email, tier\)/.test(text)) {
+        const row = { key: params[0], owner_email: params[1], tier: 'free', requests_made: 0, created_at: '2026-11-09T00:00:00.000Z' };
+        rows.push(row);
+        return { rows: [row] };
+      }
       if (/^UPDATE api_keys SET requests_made/.test(text)) return { rows: [] };
       return { rows: [] };
     },
+  },
+};
+
+// a mailer stub: records what would be sent, and can be switched off
+const sent = [];
+let mailOn = true;
+const mailerPath = require.resolve('../src/lib/mailer');
+require.cache[mailerPath] = {
+  id: mailerPath, filename: mailerPath, loaded: true,
+  exports: {
+    available: () => mailOn,
+    send: async (m) => { if (!mailOn) return { sent: false, reason: 'not-configured' }; sent.push(m); return { sent: true }; },
+    keyEmail: ({ key, tier }) => ({ subject: 'Your Ilm API key', text: 'key: ' + key, tier }),
+    sender: () => ({ name: 'Ilm API', email: 'no-reply@ilm-api.vercel.app' }),
   },
 };
 
@@ -96,6 +115,34 @@ function post(port, p, headers = {}, body = {}) {
   // 4. revoke deletes it
   const rev = await post(port, '/v1/developers/keys/revoke', { 'x-api-key': rot.body.key });
   ok('revoke deletes the key', rev.status === 200 && rows.length === 0, rev.status);
+
+  // 5. signup delivers the key by email, and withholds it from the caller
+  const fresh = await post(port, '/v1/developers/signup', {}, { email: 'new@example.com' });
+  ok('mailer on: signup returns no key', fresh.status === 201 && fresh.body.key === null && fresh.body.emailed === true, JSON.stringify(fresh.body));
+  const mailed = sent.find((m) => m.to === 'new@example.com');
+  ok('mailer on: the key is sent instead', Boolean(mailed) && /^key: ilm_[0-9a-f]{48}$/.test(mailed.text), mailed && mailed.text);
+
+  mailOn = false;
+  const noMail = await post(port, '/v1/developers/signup', {}, { email: 'nomail@example.com' });
+  ok('no mailer: key still returned so the API works', noMail.status === 201 && /^ilm_[0-9a-f]{48}$/.test(noMail.body.key || ''), JSON.stringify(noMail.body));
+  const recoverOff = await post(port, '/v1/developers/keys/recover', {}, { email: 'owner@example.com' });
+  ok('no mailer: recovery says so instead of pretending', recoverOff.status === 503, recoverOff.status);
+  mailOn = true;
+
+  // 6. recovery answers identically for known and unknown addresses.
+  // A durable account, because the earlier checks revoked the other one.
+  rows.push({ key: 'ilm_' + 'c'.repeat(48), owner_email: 'owner@example.com', tier: 'free', requests_made: 3 });
+  const before = sent.length;
+  const unknown = await post(port, '/v1/developers/keys/recover', {}, { email: 'ghost@example.com' });
+  const known = await post(port, '/v1/developers/keys/recover', {}, { email: 'owner@example.com' });
+  ok('recovery replies the same either way', unknown.status === 200 && known.status === 200 && unknown.body.message === known.body.message, JSON.stringify([unknown.body, known.body]));
+  ok('recovery only mails the address on file', sent.length - before === 1 && sent[sent.length - 1].to === 'owner@example.com', sent.length - before);
+  const keyNow = rows.find((r) => r.owner_email === 'owner@example.com').key;
+  ok('recovery mails the real key', sent[sent.length - 1].text.includes(keyNow), 'key mismatch');
+  const again = await post(port, '/v1/developers/keys/recover', {}, { email: 'owner@example.com' });
+  ok('a second recovery inside the cooldown sends nothing', again.status === 200 && sent.length === before + 1, sent.length - before);
+  const badEmail = await post(port, '/v1/developers/keys/recover', {}, { email: 'not-an-email' });
+  ok('recovery validates the address', badEmail.status === 400, badEmail.status);
 
   server.close();
   let failed = 0;
