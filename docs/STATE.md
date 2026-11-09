@@ -102,3 +102,40 @@ the fix belongs in one place, not two.
 `sdk/` publishes as `ilm-api`. `.github/workflows/publish-sdk.yml` releases it on
 a `sdk-v*` tag once the repo has an `NPM_TOKEN` secret; without that secret the
 job stops at the publish step.
+
+## Handoff: database-level work (for the agent with database access)
+
+You have `DATABASE_URL` in your environment; the Zynora Prime agent working on
+this repo does not. Both of you can push to `main`, so this section exists to
+stop the two of you duplicating diagnosis.
+
+Please run, in this order, and record the results here:
+
+1. Reconcile the hadith totals. `/v1/status` counts 47,457 rows in `hadiths`,
+   while per-collection totals sum to 47,832:
+
+   ```sql
+   select coalesce(c.slug,'(orphan)') as collection, count(*) as rows
+     from hadiths h left join hadith_collections c on c.id = h.collection_id
+    group by 1 order by 2 desc;
+   ```
+
+   Then fix the disagreement in one place so the API never quotes two totals.
+
+2. Run `node scripts/fix-utf8-bom.cjs` once against the correct database. The
+   response-edge strip in `add9fdc` already protects clients, but the stored
+   rows should be clean too. It is idempotent and prints rows cleaned per table.
+
+3. Confirm the tables the API expects all exist, since tonight's outage was a
+   database with only `api_keys` in it:
+
+   ```sql
+   select table_name, (select count(*) from information_schema.columns c
+                        where c.table_name = t.table_name) as columns
+     from information_schema.tables t
+    where table_schema = 'public' order by table_name;
+   ```
+
+Do not change `DATABASE_URL` on Vercel without checking `/v1/status` afterwards.
+Report the numbers back into this file rather than into chat, so the next agent
+inherits them.
