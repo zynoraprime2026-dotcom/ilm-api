@@ -3,6 +3,7 @@ const router = express.Router();
 const db = require('../config/db');
 const { normalizeLanguage } = require('../config/languages');
 const { pagination, pageMeta } = require('../lib/shape');
+const { parseReference } = require('../lib/reference');
 
 const ARABIC = /[\u0600-\u06FF]/;
 const HARAQAT = '\u064B\u064C\u064D\u064E\u064F\u0650\u0651\u0652\u0670\u0640';
@@ -22,6 +23,67 @@ router.get('/', async (req, res) => {
   const arabicQuery = ARABIC.test(q);
   const only = req.query.only ? String(req.query.only).split(',').map(s => s.trim()) : null;
   const want = (name) => !only || only.includes(name);
+
+  // "2:255", "Al-Baqarah 255" and "Bukhari 1" are citations, not text. Resolve
+  // them straight to the verse or hadith instead of returning an empty search,
+  // because a reader who types a reference wants that record and nothing else.
+  const ref = parseReference(q);
+  const reference = (async () => {
+    if (!ref) return;
+    try {
+      if (ref.type === 'ayah') {
+        const { rows } = await db.query(
+          `SELECT a.surah_number, a.ayah_number, s.name_english, s.name_transliteration,
+                  a.text_arabic, at.text AS translation
+             FROM ayahs a
+             JOIN surahs s ON s.number = a.surah_number
+             LEFT JOIN translations t ON t.code = 'en.sahih'
+             LEFT JOIN ayah_translations at ON at.ayah_id = a.id AND at.translation_id = t.id
+            WHERE a.surah_number = $1 AND a.ayah_number = $2
+            LIMIT 1`,
+          [ref.surah, ref.ayah]
+        );
+        const r = rows[0];
+        sections.reference = {
+          count: r ? 1 : 0,
+          matched: ref,
+          results: r ? [{
+            reference: `${r.surah_number}:${r.ayah_number}`,
+            surah: r.name_english,
+            surah_transliteration: r.name_transliteration,
+            text_arabic: r.text_arabic,
+            translation: r.translation,
+            url: `${BASE}/v1/quran/${r.surah_number}/${r.ayah_number}`,
+          }] : [],
+        };
+      } else {
+        const { rows } = await db.query(
+          `SELECT h.hadith_number, h.narrator, h.text_english, h.text_arabic, c.slug
+             FROM hadiths h
+             JOIN hadith_collections c ON c.id = h.collection_id
+            WHERE c.slug = $1 AND h.hadith_number = $2
+            LIMIT 1`,
+          [ref.collection, ref.number]
+        );
+        const r = rows[0];
+        sections.reference = {
+          count: r ? 1 : 0,
+          matched: ref,
+          results: r ? [{
+            reference: `${r.slug} ${r.hadith_number}`,
+            collection: r.slug,
+            number: r.hadith_number,
+            narrator: r.narrator,
+            text_english: r.text_english,
+            text_arabic: r.text_arabic,
+            url: `${BASE}/v1/hadith/${r.slug}/${r.hadith_number}`,
+          }] : [],
+        };
+      }
+    } catch (e) {
+      sections.reference = { count: 0, error: 'reference lookup unavailable' };
+    }
+  })();
 
   const sections = {};
 
@@ -160,7 +222,7 @@ router.get('/', async (req, res) => {
     } catch (e) { sections.fiqh = { count: 0, error: 'search unavailable' }; }
   })();
 
-  await Promise.all([quran, hadith, duas, fiqh]);
+  await Promise.all([quran, hadith, duas, fiqh, reference]);
 
   const total = Object.values(sections).reduce((sum, s) => sum + (s.count || 0), 0);
   res.set('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=120');

@@ -6,6 +6,10 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const db = require('./config/db');
 const { stripBomDeep } = require('./lib/sanitize');
+const statusRoutes = require('./routes/status');
+const usageRoutes = require('./routes/usage');
+const sourcesRoutes = require('./routes/sources');
+const immutableCache = require('./middleware/immutableCache');
 const compression = require('compression');
 
 const apiKeyAuth = require('./middleware/apiKeyAuth');
@@ -257,8 +261,14 @@ app.use('/v1/prayer-times', prayerTimesRoutes);
 app.use('/v1/alarm', alarmRoutes);
 
 // Everything else under /v1 requires a developer API key
+// public: a developer with no key still needs to know whether we are alive
+app.use('/v1/status', statusRoutes);
 app.use('/v1', apiKeyAuth);
 app.use('/v1', require('./middleware/rateLimit'));
+app.use('/v1/status', immutableCache);
+app.use('/v1', immutableCache);
+app.use('/v1/usage', usageRoutes);
+app.use('/v1/sources', sourcesRoutes);
 
 // Scripture text is immutable, so let the CDN hold it instead of Neon.
 // Routes may override this with their own Cache-Control.

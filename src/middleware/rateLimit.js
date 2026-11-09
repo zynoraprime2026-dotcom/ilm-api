@@ -9,7 +9,55 @@ const WINDOWS = {
   academic: { limit: Number(process.env.RATE_LIMIT_ACADEMIC_PER_MIN || 600), windowMs: 60 * 1000 },
 };
 
+// Daily budgets sit above the per-minute burst. A student looping a surah
+// should not be throttled for reading, but nobody should be able to mine the
+// database by key either.
+const DAILY = {
+  free: Number(process.env.RATE_LIMIT_FREE_DAILY || 2000),
+  pro: Number(process.env.RATE_LIMIT_PRO_DAILY || 100000),
+  academic: Number(process.env.RATE_LIMIT_ACADEMIC_DAILY || 100000),
+};
+
 const buckets = new Map(); // key -> { count, resetAt }
+const dailyCounts = new Map(); // key -> { day, count }
+const dayKey = () => new Date().toISOString().slice(0, 10);
+
+function bumpDaily(key) {
+  const today = dayKey();
+  let d = dailyCounts.get(key);
+  if (!d || d.day !== today) {
+    d = { day: today, count: 0 };
+    dailyCounts.set(key, d);
+    if (dailyCounts.size > 20000) {
+      for (const [k, v] of dailyCounts) if (v.day !== today) dailyCounts.delete(k);
+    }
+  }
+  d.count++;
+  return d;
+}
+
+function usageFor(key, tier) {
+  const t = tier || 'free';
+  const cfg = WINDOWS[t] || WINDOWS.free;
+  const dayLimit = DAILY[t] || DAILY.free;
+  const now = Date.now();
+  const b = key ? buckets.get(key) : null;
+  const d = key ? dailyCounts.get(key) : null;
+  const today = dayKey();
+  const dayUsed = d && d.day === today ? d.count : 0;
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+  return {
+    tier: t,
+    minuteLimit: cfg.limit,
+    minuteUsed: b ? Math.min(b.count, cfg.limit + 1) : 0,
+    minuteRemaining: b ? Math.max(0, cfg.limit - b.count) : cfg.limit,
+    minuteResetsIn: b ? Math.max(1, Math.ceil((b.resetAt - now) / 1000)) : Math.round(cfg.windowMs / 1000),
+    dayLimit,
+    dayUsed,
+    dayRemaining: Math.max(0, dayLimit - dayUsed),
+    dayResetsAt: `${tomorrow}T00:00:00.000Z`,
+  };
+}
 
 function sweep(now) {
   if (buckets.size < 5000) return;
@@ -33,6 +81,21 @@ function rateLimit(req, res, next) {
   res.set('X-RateLimit-Limit', String(cfg.limit));
   res.set('X-RateLimit-Remaining', String(remaining));
   res.set('X-RateLimit-Reset', String(Math.ceil(b.resetAt / 1000)));
+  const dayLimit = DAILY[client.tier] || DAILY.free;
+  const d = bumpDaily(client.key);
+  res.set('X-RateLimit-Daily-Limit', String(dayLimit));
+  res.set('X-RateLimit-Daily-Remaining', String(Math.max(0, dayLimit - d.count)));
+  if (d.count > dayLimit) {
+    const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    return res.status(429).json({
+      error: 'Daily quota exceeded',
+      reason: 'daily_quota',
+      tier: client.tier || 'free',
+      limit: dayLimit,
+      resets_at: `${tomorrow}T00:00:00.000Z`,
+      usage_url: '/v1/usage',
+    });
+  }
   if (b.count > cfg.limit) {
     res.set('Retry-After', String(retryAfter));
     return res.status(429).json({
@@ -41,6 +104,8 @@ function rateLimit(req, res, next) {
       limit: cfg.limit,
       window_seconds: Math.round(cfg.windowMs / 1000),
       retry_after_seconds: retryAfter,
+      reason: 'minute_burst',
+      usage_url: '/v1/usage',
     });
   }
   next();
@@ -48,3 +113,5 @@ function rateLimit(req, res, next) {
 
 module.exports = rateLimit;
 module.exports.WINDOWS = WINDOWS;
+module.exports.DAILY = DAILY;
+module.exports.usageFor = usageFor;
