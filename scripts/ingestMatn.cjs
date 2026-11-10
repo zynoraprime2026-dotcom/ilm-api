@@ -3,6 +3,11 @@
 //
 // Usage:
 //   DATABASE_URL=... node scripts/ingestMatn.cjs data/mutoon/al-ajurrumiyyah.json
+//   node scripts/ingestMatn.cjs data/mutoon/al-ajurrumiyyah.json --check   # validate only
+//
+// Every line passes the text-quality gate in src/lib/matnText.js before anything
+// is written. OCR noise in a text people memorise is worse than no text, so a
+// failing file is refused whole rather than partially imported.
 //
 // File shape:
 //   { "slug": "al-ajurrumiyyah", "source": "edition / licence note",
@@ -14,8 +19,8 @@ const fs = require('fs');
 const path = require('path');
 const { neon } = require('@neondatabase/serverless');
 const { MUTOON } = require('../data/mutoon.js');
+const { inspectMatn } = require('../src/lib/matnText.js');
 
-const sql = neon(process.env.DATABASE_URL);
 
 (async () => {
   const file = process.argv[2];
@@ -33,6 +38,35 @@ const sql = neon(process.env.DATABASE_URL);
     console.error('File has no lines.');
     process.exit(1);
   }
+
+  const verdict = inspectMatn(data.lines);
+  if (verdict.stats) {
+    console.log(
+      `${data.slug}: ${verdict.stats.lines} lines, ` +
+      `${verdict.stats.arabic_letters} Arabic letters, ` +
+      `latin ratio ${verdict.stats.latin_ratio}, ` +
+      `diacritic ratio ${verdict.stats.diacritic_ratio}`
+    );
+  }
+  if (!verdict.ok) {
+    console.error(`Text quality gate refused this file: ${verdict.problems.length} problem(s).`);
+    for (const p of verdict.problems) console.error(`  line ${p.n}: ${p.problem}`);
+    if (!process.argv.includes('--force')) {
+      console.error('Nothing was written. Fix the source text, or pass --force if you have read the file yourself and accept it.');
+      process.exit(1);
+    }
+    console.error('--force given, importing anyway.');
+  }
+  if (process.argv.includes('--check')) {
+    console.log('Check only, nothing written.');
+    process.exit(verdict.ok ? 0 : 1);
+  }
+
+  if (!process.env.DATABASE_URL) {
+    console.error('DATABASE_URL is not set, so there is nowhere to write. Use --check to validate a file without a database.');
+    process.exit(1);
+  }
+  const sql = neon(process.env.DATABASE_URL);
 
   await sql`CREATE TABLE IF NOT EXISTS mutoon_lines (
     slug text NOT NULL,

@@ -2,7 +2,7 @@
 const path = require('path');
 const express = require('express');
 const http = require('http');
-const root = '/app/conversations/6ad23d2e4ce18c326725032f/work/ilmapi';
+const root = path.join(__dirname, '..'); // resolved from the repo, not an old sandbox path
 
 const fake = {
   query: async (sql) => {
