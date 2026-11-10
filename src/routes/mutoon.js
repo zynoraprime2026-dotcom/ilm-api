@@ -62,7 +62,7 @@ const API_BASE = String(process.env.API_BASE_URL || 'https://ilm-api.vercel.app'
 // Audio provenance in one place, so a bad source can be pulled without shipping a
 // client update. The upstream file is never advertised: clients talk to /stream on
 // this domain, which is what keeps playback inside the app that asked for it.
-function audioRegistry() {
+function audioRegistry(baseUrl) {
   return MUTOON.filter((m) => m.audio && m.audio.url).map((m) => ({
     slug: m.slug,
     title_english: m.title_english,
@@ -72,13 +72,13 @@ function audioRegistry() {
     licence: m.audio.licence || m.audio.license || null,
     verified_at: m.audio.verified_at || null,
     bytes: m.audio.bytes || null,
-    stream_url: `${API_BASE}/v1/mutoon/${m.slug}/stream`,
+    stream_url: `${API_BASE}${String(baseUrl || '/v1/mutoon').replace(/\/+$/, '')}/${m.slug}/stream`,
     upstream_host: (() => { try { return new URL(m.audio.url).host; } catch { return null; } })(),
   }));
 }
 
 router.get('/audio-sources', (req, res) => {
-  const rows = audioRegistry();
+  const rows = audioRegistry(req.baseUrl);
   res.json({
     count: rows.length,
     note: 'Playback goes through /v1/mutoon/{slug}/stream on this API; upstream hosts are listed for attribution only.',
@@ -121,7 +121,7 @@ router.get('/pdf-sources', (req, res) => {
       source: p.source,
       source_item: p.source_item,
       licence: p.licence,
-      download_url: `${API_BASE}/v1/mutoon/${m.slug}/pdf`,
+      download_url: `${API_BASE}${String(req.baseUrl || '/v1/mutoon').replace(/\/+$/, '')}/${m.slug}/pdf`,
     };
   });
   res.json({
@@ -303,7 +303,7 @@ router.get('/:slug/lines', async (req, res) => {
 router.get('/:slug/audio', (req, res) => {
   const m = MUTOON.find((x) => x.slug === req.params.slug);
   if (!m) return res.status(404).json({ error: `Unknown matn: ${req.params.slug}` });
-  if (m.audio && m.audio.url) return res.redirect(302, `${API_BASE}/v1/mutoon/${m.slug}/stream`);
+  if (m.audio && m.audio.url) return res.redirect(302, `${API_BASE}${String(req.baseUrl || '/v1/mutoon').replace(/\/+$/, '')}/${m.slug}/stream`);
   return res.status(503).json({
     error: 'Audio not configured',
     slug: m.slug,
@@ -324,7 +324,7 @@ router.get('/:slug/audio/:line', (req, res) => {
   if (m.audio && m.audio.url) {
     res.set('X-Audio-Kind', 'matn');
     res.set('X-Audio-Line-Ignored', String(line));
-    return res.redirect(302, `${API_BASE}/v1/mutoon/${m.slug}/stream`);
+    return res.redirect(302, `${API_BASE}${String(req.baseUrl || '/v1/mutoon').replace(/\/+$/, '')}/${m.slug}/stream`);
   }
   return res.status(503).json({
     error: 'Audio not configured',

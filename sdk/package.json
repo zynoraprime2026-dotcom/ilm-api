@@ -1,8 +1,18 @@
 {
   "name": "ilm-api",
-  "version": "1.0.0",
-  "description": "Typed client for the Ilm API — Quran, hadith, tafsir, duas, fiqh and prayer data",
-  "keywords": ["quran", "hadith", "tafsir", "islamic", "api", "ilm"],
+  "version": "1.1.0",
+  "description": "Typed, zero-dependency client for the Ilm API: Quran with word-by-word grammar, 16 hadith collections, tafsir, duas, fiqh, mutoon, dictionary and prayer times. Node, Bun, Deno, Workers, browsers.",
+  "keywords": [
+    "quran",
+    "hadith",
+    "tafsir",
+    "islamic",
+    "arabic",
+    "fiqh",
+    "mutoon",
+    "api",
+    "ilm"
+  ],
   "license": "MIT",
   "main": "./index.js",
   "module": "./index.mjs",
@@ -12,9 +22,36 @@
       "types": "./index.d.ts",
       "import": "./index.mjs",
       "require": "./index.js"
-    }
+    },
+    "./package.json": "./package.json"
   },
-  "files": ["index.js", "index.mjs", "index.d.ts", "README.md"],
-  "engines": { "node": ">=18" },
-  "sideEffects": false
+  "files": [
+    "index.js",
+    "index.mjs",
+    "index.d.ts",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": false,
+  "scripts": {
+    "test": "node --test test/unit.test.mjs test/live.test.mjs",
+    "test:unit": "node --test test/unit.test.mjs",
+    "test:live": "node --test test/live.test.mjs",
+    "check": "node --check index.js && node --check index.mjs && node -e \"require('./index.js')\"",
+    "smoke": "node example.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zynoraprime2026-dotcom/ilm-api.git",
+    "directory": "sdk"
+  },
+  "homepage": "https://ilm-api.vercel.app",
+  "bugs": {
+    "url": "https://github.com/zynoraprime2026-dotcom/ilm-api/issues"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
 }

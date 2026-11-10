@@ -172,7 +172,7 @@ router.get('/:collection/:number', async (req, res) => {
     const r = await resolve(collection, number);
     const dbg = { mapLoaded: Object.keys(RECORD_MAPS).length, mapped: (RECORD_MAPS[collection] || {})[String(number)] || null };
     return res.json(Object.assign(r.recorded
-      ? { recorded: true, clip: `/v1/hadith-audio/${collection}/${encodeURIComponent(number)}.mp3`, voice: 'recorded recitation' }
+      ? { recorded: true, clip: `${String(req.baseUrl || '/v1/hadith-audio').replace(/\/+$/, '')}/${collection}/${encodeURIComponent(number)}.mp3`, voice: 'recorded recitation' }
       : { recorded: false, tts: true, voice: 'arabic tts' }, dbg));
   } catch (e) {
     return res.json({ recorded: false, tts: true, voice: 'arabic tts' });

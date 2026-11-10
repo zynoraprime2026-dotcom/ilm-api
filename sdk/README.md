@@ -1,44 +1,91 @@
 # ilm-api
 
-Typed, zero-dependency client for the Ilm API: Quran with 19 translations across
-15 languages, 16 hadith collections, tafsir, duas, fiqh, roots, narrators and
-prayer times. Works in Node 18+, Bun, Deno, Cloudflare Workers and the browser.
+Typed, zero-dependency client for the Ilm API: Quran with word-by-word grammar,
+16 hadith collections, tafsir, duas, fiqh, the Mutun Talib al-'Ilm catalogue,
+dictionary, roots, narrators and prayer times. One file, no build step, no
+dependencies. Node 18+, Bun, Deno, Cloudflare Workers and browsers.
 
 ```bash
 npm install ilm-api
 ```
 
-## Quick start
+Until the package is on npm, install the tarball from the release:
+
+```bash
+npm install https://github.com/zynoraprime2026-dotcom/ilm-api/releases/download/sdk-v1.1.0/ilm-api-1.1.0.tgz
+```
+
+## Two tiers, one shape
 
 ```js
 import IlmApi from 'ilm-api';
 
-const ilm = new IlmApi({ apiKey: process.env.ILM_API_KEY });
+const ilm = new IlmApi({ apiKey: process.env.ILM_API_KEY }); // /v1
+const web = IlmApi.public();                                  // /web/v1, no key
+```
 
+The public tier serves the read-only subset with no key: Quran, tafsir, hadith,
+hadith audio, duas, mutoon, dictionary, roots, prayer times and alarm. Everything
+else needs a key, and the client says so before it makes a request:
+
+```js
+try {
+  await web.fiqh.books();
+} catch (e) {
+  e.code;  // 'KEY_REQUIRED'
+  e.hint;  // 'Construct the client with new IlmApi({ apiKey }) to call this route.'
+}
+```
+
+## Quick start
+
+```js
 const surah = await ilm.quran.surah(2, { limit: 5 });
-console.log(surah.surah.name_english); // Al-Baqara
 for (const ayah of surah.ayahs) console.log(ayah.ayah_number, ayah.translation);
+
+const { words } = await ilm.quran.words(2, 255);   // position, grammar, root, audio
+const hadith = await ilm.hadith.get('bukhari', 1); // text, grade, isnad, citation
+const tafsir = await ilm.tafsir.get(2, 255);
 ```
 
-No key? Read the public tier, which serves the same content without one:
+## Media that behaves like a file
+
+Every audio and PDF is proxied by the API, so it plays cross-origin and saves
+with a filename. No third-party CDN in the path.
 
 ```js
-const ilm = IlmApi.public();
-const surahs = await ilm.quran.surahs(); // 114
+ilm.quran.audioUrl(2, 255, { reciter: 'ar.alafasy' });            // play
+ilm.quran.audioUrl(2, 255, { reciter: 'ar.alafasy', download: true }); // save
+ilm.mutoon.streamUrl('al-ajurrumiyyah');
+ilm.mutoon.pdfUrl('al-jazariyyah');
+ilm.mutoon.lineAudioUrl('al-ajurrumiyyah', 1);
+ilm.hadith.audioUrl('bukhari', 1);
+ilm.dictionary.audioUrl('كتاب');
+
+const res = await ilm.mutoon.download('al-jazariyyah', { pdf: true });
+fs.writeFileSync('al-jazariyyah.pdf', Buffer.from(await res.arrayBuffer()));
 ```
 
-## Citations, not guesses
-
-Readers cite scripture; the search endpoint understands that.
+Streams support byte ranges, so a player can seek without pulling the whole file:
 
 ```js
-const r = await ilm.search('2:255');        // Ayat al-Kursi
-const h = await ilm.search('Bukhari 1');    // first hadith
-const k = await ilm.search('Al-Baqarah 255');
+const res = await ilm.media('/mutoon/al-ajurrumiyyah/stream', null, { range: 'bytes=0-1023' });
+res.status;                        // 206
+res.headers.get('content-range');  // 'bytes 0-1023/6752107'
 ```
 
-Each returns `sections.reference` with the resolved record, alongside ordinary
-text matches for Quran, hadith, duas and fiqh.
+## Mutoon
+
+```js
+const cat = await ilm.mutoon.list();        // 29 matns
+const paths = await ilm.mutoon.paths();     // 13 study paths, grammar first
+const matn = await ilm.mutoon.get('al-ajurrumiyyah');
+matn.pdf_available, matn.audio_available;
+```
+
+`mutoon.lines()` rejects with status `409` and `{ ingested: false }` for a matn
+whose text is catalogued but not loaded. The API never serves partial text, so
+treat the 409 as "not available yet", not as a bug.
 
 ## Errors you can act on
 
@@ -46,52 +93,46 @@ text matches for Quran, hadith, duas and fiqh.
 import { IlmApiError } from 'ilm-api';
 
 try {
-  await ilm.quran.surah(2, { translation: 'fr' });
+  await ilm.quran.surah(2, { translation: 'zz' });
 } catch (e) {
-  if (e instanceof IlmApiError) {
-    console.log(e.status, e.code, e.hint);
-    // 400, undefined, 'Use ?language=fr for that language's default translation…'
-  }
+  e.name;    // 'IlmApiError'
+  e.status;  // 400
+  e.hint;    // 'Use ?language=fr for that language's default translation…'
+  e.code;    // 'KEY_REQUIRED' | 'TIMEOUT' | 'NETWORK' | pg code, when present
 }
 ```
 
-Unknown translation codes answer 400 rather than silently returning an empty
-surah. Retries on 429 and 5xx happen automatically and honour `Retry-After`.
+Retries cover network errors, 429 and 5xx, honour `Retry-After`, and never
+re-run a write. Timeouts are per attempt. `ilm.lastRateLimit` carries
+`{ limit, remaining, reset, dailyLimit, dailyRemaining }` after every call.
 
-## Pacing yourself
+## Extras
 
 ```js
-await ilm.quran.surah(1);
-console.log(ilm.lastRateLimit);
-// { limit: 600, remaining: 599, dailyLimit: 100000, dailyRemaining: 99999, … }
-
-console.log(await ilm.usage()); // tier, minute and day budgets, resets
+ilm.search('2:255');            // one query across Quran, hadith, duas, tafsir, fiqh
+ilm.cite('2:255');              // 'Quran 2:255 (Al-Baqara)'
+ilm.hadith.isnad('bukhari', 1); // the chain, narrator by narrator
+ilm.prayerTimes({ city: 'Accra' });
+ilm.alarm.vapid();              // web-push public key
+ilm.dictionary.root('كتب');
 ```
 
-## Everything available
+## Types
 
-| Call | Returns |
-| --- | --- |
-| `quran.surahs()` | 114 surahs with metadata |
-| `quran.surah(n, { translation, language, page, limit })` | ayahs with Arabic and translation |
-| `quran.translations()` | 19 editions with translator names |
-| `quran.offline()` | the whole Quran in one payload, for PWA sync |
-| `hadith.collections()` / `hadith.collection(slug)` / `hadith.get(slug, n)` | 16 collections |
-| `hadith.search(q)` | Arabic or English full text |
-| `tafsir.get(surah, ayah)` | Ibn Kathir and Maarif-ul-Quran |
-| `duas.categories()` / `duas.category(slug)` | 137 categories |
-| `fiqh.books()` / `fiqh.search(q)` | 30 classical manuals |
-| `roots.list()` | 1,651 Arabic roots |
-| `narrators.list()` / `reciters.list()` | narrator and reciter registries |
-| `status()` | is the API and its database alive, with row counts |
-| `sources()` | provenance and review state for every edition |
+`index.d.ts` ships with the package and is written against the live responses.
+The contract tests in `test/live.test.mjs` hit production, so a change in the API
+shows up as a failing test rather than a runtime surprise.
 
-## Offline-first apps
+```bash
+npm test                       # keyless live tests, no secrets
+ILM_API_KEY=ilm_... npm test   # adds the keyed surface
+```
 
-`quran.offline()` returns all 114 surahs with Arabic and one translation in a
-single response, which is the cheapest way to seed a PWA once and read forever.
-Pair it with `quran.surah()` for later reads.
+## Scope
 
-## License
+Covered: every API-key route on `/v1`, and everything the keyless `/web` tier
+serves. Not covered: the browser-session flows (`/v1/auth`, `/v1/bookmarks`) and
+the developer console key rotation, which are dashboard actions rather than
+client calls. `developers.signup()` is included because it self-provisions a key.
 
-MIT. The underlying texts carry their own attribution; see `sources()`.
+MIT.

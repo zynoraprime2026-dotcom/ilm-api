@@ -1,33 +1,85 @@
-# Publishes the SDK in sdk/ to npm when a sdk-v* tag is pushed.
-# Requires one repository secret: NPM_TOKEN (an npm granular access token with
-# read+write on the package). Until that secret exists the job fails at the
-# publish step and nothing is released.
+# Copy to .github/workflows/publish-sdk.yml to enable tag-driven publishing.
+# The GitHub token this repo is pushed with has no 'workflow' scope, so this file
+# cannot live under .github/workflows/ until it is added by hand or a token with
+# workflow scope is used. Publishing works without it: scripts/release-sdk.sh
+# publishes straight from a machine that has NPM_TOKEN.
+
+# Publishes sdk/ to npm when an sdk-v* tag is pushed, or on demand.
+#
+# Needs one repository secret: NPM_TOKEN — an npm granular access token with
+# read+write on the "ilm-api" package. Until that secret exists the job stops at
+# the publish step and nothing is released.
+#
+#   git tag sdk-v1.1.0 && git push origin sdk-v1.1.0
+#
 name: publish-sdk
+
 on:
   push:
     tags: ['sdk-v*']
   workflow_dispatch:
+
+concurrency:
+  group: publish-sdk-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
           registry-url: 'https://registry.npmjs.org'
-      - name: Verify the package parses before anything leaves the building
+
+      - name: Refuse to ship a package that does not parse
         run: |
           node --check sdk/index.js
-          node -e "const p=require('./sdk/package.json'); if(!p.name||!p.version) process.exit(1);"
-      - name: Smoke test against production
+          node --check sdk/index.mjs
+          node --check sdk/example.js
+          node -e "const p=require('./sdk/package.json'); if(!p.name||!p.version) throw new Error('missing name or version'); console.log(p.name, p.version);"
+
+      - name: Refuse to ship types and code that disagree
+        run: |
+          test -s sdk/index.d.ts
+          grep -q 'export default IlmApi' sdk/index.d.ts
+          grep -q 'IlmApiError' sdk/index.js
+
+      - name: Offline tests
+        working-directory: sdk
+        run: node --test test/unit.test.mjs
+
+      - name: Live contract tests against production (keyless)
+        working-directory: sdk
+        run: node --test test/live.test.mjs
+
+      - name: Smoke test the example
+        working-directory: sdk
         env:
           ILM_API_KEY: ${{ secrets.ILM_API_KEY }}
+        run: node example.js
+
+      - name: Tag must match package version
         run: |
-          if [ -z "$ILM_API_KEY" ]; then echo "no ILM_API_KEY secret, skipping live smoke"; exit 0; fi
-          node sdk/example.js
+          PKG=$(node -p "require('./sdk/package.json').version")
+          if [[ "$GITHUB_REF" == refs/tags/sdk-v* ]]; then
+            TAG=${GITHUB_REF#refs/tags/sdk-v}
+            if [ "$TAG" != "$PKG" ]; then
+              echo "tag sdk-v$TAG does not match package version $PKG" >&2
+              exit 1
+            fi
+          fi
+          echo "version $PKG ok"
+
       - name: Publish
         working-directory: sdk
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: npm publish --access public
+        run: |
+          if [ -z "$NODE_AUTH_TOKEN" ]; then
+            echo "::error::NPM_TOKEN secret is not set, so nothing was published."
+            exit 1
+          fi
+          npm publish --access public --provenance
