@@ -1,61 +1,53 @@
-# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
 
-# compiled output
-dist
-tmp
-out-tsc
-*.tsbuildinfo
-.expo
-.expo-shared
-
-# dependencies
-node_modules
-
-# IDEs and editors
-/.idea
-.project
-.classpath
-.c9/
-*.launch
-.settings/
-*.sublime-workspace
-
-# IDE - VSCode
-.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json
 !.vscode/settings.json
 !.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-
+# Environment variables — never commit secrets
+# IDE - VSCode
+# IDEs and editors
+# Replit
+# See https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files for more about ignoring files.
+# System Files
+# Uploaded assets (not part of source)
+# compiled output
+# dependencies
+# fetched bulk data caches (re-download via scripts/fetchWords.cjs & fetchTranslations.cjs)
 # misc
+*.launch
+*.sublime-workspace
+*.tsbuildinfo
+.DS_Store
+.c9/
+.cache/
+.classpath
+.cursor/rules/nx-rules.mdc
+.env
+.env.*.local
+.env.local
+.expo
+.expo-shared
+.github/instructions/nx.instructions.md
+.local/
+.npmrc
+.project
+.settings/
+.vscode/*
+/.idea
 /.sass-cache
 /connect.lock
 /coverage
 /libpeerconnection.log
-npm-debug.log
-yarn-error.log
-testem.log
 /typings
-
-# System Files
-.DS_Store
 Thumbs.db
-
-.cursor/rules/nx-rules.mdc
-.github/instructions/nx.instructions.md
-
-# Replit
-.cache/
-.local/
-
-# Environment variables — never commit secrets
-.env
-.env.local
-.env.*.local
-
-# Uploaded assets (not part of source)
 attached_assets/
-
-# fetched bulk data caches (re-download via scripts/fetchWords.cjs & fetchTranslations.cjs)
 data/qurancom-words.json
 data/tr-*.json
+dist
+node_modules
+npm-debug.log
+out-tsc
+sdk/*.tgz
+testem.log
+tmp
+yarn-error.log
