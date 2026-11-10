@@ -262,7 +262,7 @@ export interface PrayerTimes {
   times: { fajr: string; sunrise: string; dhuhr: string; asr: string; maghrib: string; isha: string };
 }
 
-export interface Paged<T, K extends string> {
+export type Paged<T, K extends string> = {
   limit: number;
   offset: number;
   count: number;
