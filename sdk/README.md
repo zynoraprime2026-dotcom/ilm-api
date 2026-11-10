@@ -9,7 +9,8 @@ dependencies. Node 18+, Bun, Deno, Cloudflare Workers and browsers.
 npm install ilm-api
 ```
 
-Until the package is on npm, install the tarball from the release:
+No build step, no dependencies. The same tarball is attached to the
+`sdk-v1.1.0` GitHub release if you need to install a pinned build:
 
 ```bash
 npm install https://github.com/zynoraprime2026-dotcom/ilm-api/releases/download/sdk-v1.1.0/ilm-api-1.1.0.tgz
