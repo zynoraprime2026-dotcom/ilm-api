@@ -5,6 +5,7 @@ const express = require('express');
 const router = express.Router();
 const db = require('../config/db');
 const { MUTOON, PATHS } = require('../../data/mutoon.js');
+const { bundledMatn } = require('../lib/bundledMatn');
 
 const AUDIO_BASE = String(process.env.MUTOON_AUDIO_BASE || '').replace(/\/+$/, '');
 // Lines live in Postgres (scripts/ingestMatn.cjs), not in memory: a serverless
@@ -13,7 +14,12 @@ const AUDIO_BASE = String(process.env.MUTOON_AUDIO_BASE || '').replace(/\/+$/, '
 const LINES = {}; // slug -> { lines, source }, read-through cache
 
 function withAudio(m, baseUrl) {
-  const ingested = Boolean(LINES[m.slug] && LINES[m.slug].lines && LINES[m.slug].lines.length);
+  // Text counts as available if it came from the database or ships with the code.
+  const bundled = bundledMatn(m.slug);
+  const ingested = Boolean(
+    (LINES[m.slug] && LINES[m.slug].lines && LINES[m.slug].lines.length) ||
+    (bundled && bundled.lines.length)
+  );
   const matnAudio = m.audio && m.audio.url ? m.audio : null;
   // Per-line audio is richer (a learner can loop one verse) but needs a bucket.
   // Whole-matn audio is what we can verify today, so serve it rather than 503.
@@ -251,6 +257,11 @@ router.get('/:slug/lines', async (req, res) => {
   const m = MUTOON.find((x) => x.slug === req.params.slug);
   if (!m) return res.status(404).json({ error: `Unknown matn: ${req.params.slug}`, list_url: '/v1/mutoon' });
 
+  // Curated rows win; the shipped edition is the fallback. Both are gated text.
+  const fromRepository = () => {
+    const b = bundledMatn(m.slug);
+    return b ? { ...b, text_source: 'repository' } : null;
+  };
   if (!LINES[m.slug]) {
     try {
       const { rows } = await db.query(
@@ -260,19 +271,18 @@ router.get('/:slug/lines', async (req, res) => {
       if (rows.length) {
         LINES[m.slug] = {
           source: rows[0].source || null,
+          text_source: 'database',
           lines: rows.map((r) => ({ n: r.line_number, arabic: r.arabic, translation: r.translation, transliteration: r.transliteration })),
         };
       }
     } catch (e) {
-      if (String(e.code) === '42P01') {
-        return res.status(409).json({
-          error: 'Text not ingested yet',
-          slug: m.slug,
-          ingested: false,
-          hint: 'Run scripts/ingestMatn.cjs to create mutoon_lines and load this matn. The API never serves partial text.',
-        });
-      }
-      throw e;
+      // No table yet, or the database is unreachable: neither is a reason to
+      // withhold a public-domain text that ships with the code.
+      if (String(e.code) !== '42P01' && !String(e.code || '').startsWith('ECONN')) throw e;
+    }
+    if (!LINES[m.slug]) {
+      const b = fromRepository();
+      if (b) LINES[m.slug] = b;
     }
   }
 
@@ -282,7 +292,7 @@ router.get('/:slug/lines', async (req, res) => {
       error: 'Text not ingested yet',
       slug: m.slug,
       ingested: false,
-      hint: 'This matn is catalogued but its lines are not loaded. Ingest it with scripts/ingestMatn.cjs.',
+      hint: 'This matn is catalogued but no edition is loaded: no mutoon_lines rows and no data/mutoon/<slug>.json edition in the repository.',
     });
   }
   const from = Math.max(1, parseInt(req.query.from, 10) || 1);
@@ -293,6 +303,8 @@ router.get('/:slug/lines', async (req, res) => {
     total_lines: pack.lines.length,
     from, to,
     source: pack.source || null,
+    licence: pack.licence || null,
+    text_source: pack.text_source || 'database',
     audio_available: Boolean(AUDIO_BASE),
     lines: pack.lines
       .filter((l) => l.n >= from && l.n <= to)

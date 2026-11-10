@@ -25,19 +25,32 @@ const MUTOON_PDFS = {
   'matn-al-adhkar': { bytes: 2297310, file: "Mutūn Ṭālib al-'Ilm - Dr. 'Abdul-Muḥsin bin Muḥammad al-Qāsim (retreived 22.11.21) /Al-Adhkār/Matn al-Adhkār.pdf" },
   'mukhtasar-al-adhkar': { bytes: 1740077, file: "Mutūn Ṭālib al-'Ilm - Dr. 'Abdul-Muḥsin bin Muḥammad al-Qāsim (retreived 22.11.21) /Al-Adhkār/Matn Mukhtasar al-Adhkār.pdf" },
   'nukhbat-al-fikr': { bytes: 1138359, file: "Mutūn Ṭālib al-'Ilm - Dr. 'Abdul-Muḥsin bin Muḥammad al-Qāsim (retreived 22.11.21) /Nukhbatul-Fikr/Matn Nukhbatul-Fikr.pdf" },
+  'al-bayquniyyah': { item: 'tzkerah_gmail_20170828_0352', bytes: 1375402, file: "المنظومة البيقونية في علم مصطلح الحديث_text.pdf", note: "Item title names the poem itself; 6 pages matches a 34-line matn." },
+  'al-shatibiyyah': { item: '20251211_20251211_1821', bytes: 31232100, file: "متن_الشاطبية_حرز_الأماني_ووجه_التهاني_.pdf", note: "Item title and file name both name the matn; 111 pages fits 1,173 lines." },
+  'al-usul-al-thalatha': { item: '506Pdf', bytes: 1816105, file: "506- الأصول الثلاثة وأدلتها وشروط الصلاة والقواعد الأربع - ابن عبد الوهاب - ط الرئاسة    pdf  _text.pdf", note: "Official Saudi print of the matn. Also carries the author's Conditions of Prayer and Four Rules, which is why it is 43 pages." },
+  'kitab-al-tawhid': { item: '20230531_20230531_092514', bytes: 1950328, file: "محمد بن عبد الوهاب - كتاب التوحيد_text.pdf", note: "Item title is the matn itself; 165 pages is the standard extent with its hadith citations." },
+  'nur-al-idah': { item: 'citamujahid88_gmail_201609', bytes: 4216489, file: "نور الإيضاح_text.pdf", note: "Item description reads 'Matan Nurul Idhoh wa Najatul Arwah', the matn, not a hashiyah." },
+  'tuhfat-al-atfal': { item: 'toehopohu_crymail2_20171223', bytes: 518270, file: "تحفة الأطفال والغلمان.pdf", note: "From a 'series of tajwid matns' collection; text layer opens with the nazm and names Sulayman al-Jamzuri." },
   'umdat-al-ahkam': { bytes: 2477484, file: "Mutūn Ṭālib al-'Ilm - Dr. 'Abdul-Muḥsin bin Muḥammad al-Qāsim (retreived 22.11.21) /Umdatul-Aḥkām/Matn Umdatul-Aḥkām.pdf" },
 };
 
 function pdfFor(slug) {
   const e = MUTOON_PDFS[slug];
   if (!e) return null;
+  // Most editions come from the one al-Qasim collection; a promoted candidate
+  // comes from its own archive item, recorded here so the credit stays truthful.
+  const item = e.item || ARCHIVE_ITEM;
+  const base = e.item ? 'https://archive.org/download/' + item + '/' : ARCHIVE_BASE;
   return {
     file: e.file,
     bytes: e.bytes,
+    note: e.note || null,
     // encode each path segment: the filenames carry Arabic and diacritics
-    upstream: ARCHIVE_BASE + e.file.split('/').map(encodeURIComponent).join('/'),
-    source: 'Internet Archive — Mutun Talib al-\'Ilm (Dr. \'Abdul-Muhsin al-Qasim)',
-    source_item: ARCHIVE_ITEM,
+    upstream: base + e.file.split('/').map(encodeURIComponent).join('/'),
+    source: e.item
+      ? 'Internet Archive — user-contributed upload (no licence stated)'
+      : 'Internet Archive — Mutun Talib al-\'Ilm (Dr. \'Abdul-Muhsin al-Qasim)',
+    source_item: item,
     licence: null,
   };
 }

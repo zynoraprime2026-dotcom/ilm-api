@@ -75,7 +75,23 @@ router.get('/collections', async (req, res) => {
   try {
     await ensureArabicNames();
   } catch (e) { /* non-fatal: Arabic names optional */ }
-  const { rows } = await db.query('SELECT * FROM hadith_collections ORDER BY name');
+  // Each collection carries its own hadith_count. Without it a client could list
+  // sixteen collections and still be unable to say how many hadiths are behind
+  // them, which is the first number anyone quoting this corpus needs.
+  const { rows } = await db.query(
+    `SELECT c.*, COALESCE(h.n, 0)::int AS hadith_count
+       FROM hadith_collections c
+       LEFT JOIN (SELECT collection_id, COUNT(*) AS n FROM hadiths GROUP BY collection_id) h
+         ON h.collection_id = c.id
+      ORDER BY c.name`
+  );
+  const total = rows.reduce((n, r) => n + (r.hadith_count || 0), 0);
+  // ?meta=1 adds the corpus total; the bare response stays the array it has
+  // always been, so existing clients keep working unchanged.
+  if (String(req.query.meta || '') === '1') {
+    return res.json({ count: rows.length, total_hadiths: total, collections: rows });
+  }
+  res.set('X-Total-Hadiths', String(total));
   res.json(rows);
 });
 
