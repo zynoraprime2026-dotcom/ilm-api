@@ -4,6 +4,15 @@ const db = require('../config/db');
 const { getCached, setCached } = require('../config/cache');
 
 // GET /v1/duas/categories
+// Module index, for the same reason as /v1/quran: the bare path used to 404.
+router.get('/', (req, res) => {
+  res.json({
+    module: 'duas',
+    note: 'Categories first, then /:category for the duas inside it.',
+    endpoints: ['/categories', '/:category', '/search', '/random'],
+  });
+});
+
 router.get('/categories', async (req, res) => {
   const { rows } = await db.query(
     `SELECT c.*

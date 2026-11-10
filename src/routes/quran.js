@@ -56,6 +56,25 @@ router.use(async (req, res, next) => {
 });
 
 // GET /v1/quran/translations — list all available translations
+// Module index. Calling /v1/quran bare used to answer 404, which reads as "this
+// module is not here" when every sub-route works; say what is here instead.
+router.get('/', (req, res) => {
+  res.json({
+    module: 'quran',
+    note: 'Start at /surahs for the catalogue, then /:surah/:ayah for a verse. Pass ?language=<code> for a translation.',
+    endpoints: [
+      '/surahs',
+      '/:surah',
+      '/:surah/:ayah',
+      '/:surah/:ayah/words',
+      '/:surah/:ayah/cite',
+      '/:surah/:ayah/audio',
+      '/translations',
+      '/offline',
+    ],
+  });
+});
+
 router.get('/translations', async (req, res) => {
   res.set('Cache-Control', 'private, max-age=86400');
   const { rows } = await db.query('SELECT code, language, translator_name, is_simplified FROM translations ORDER BY is_simplified DESC, language, translator_name');

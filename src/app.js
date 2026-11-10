@@ -188,14 +188,17 @@ app.get('/v1/languages', async (req, res) => {
   });
 });
 
-// Machine-readable endpoint listing, kept at /v1/meta for tooling that wants it
-app.get('/v1/meta', (req, res) => {
+// Machine-readable endpoint listing. Shared by both tiers so a keyless client
+// can discover the API the same way a keyed one does.
+const metaHandler = (req, res) => {
   res.json({
     name: 'Ilm API',
-    description: "A unified Islamic knowledge API — Quran, Hadith, Prayer Times, and Du'as",
+    description: 'A unified Islamic knowledge API — Quran, Hadith, Prayer Times, and Du\'as',
+    tier: (req.apiClient && req.apiClient.tier) || 'keyed',
     endpoints: ENDPOINTS,
   });
-});
+};
+app.get('/v1/meta', metaHandler);
 
 // User-account routes (signup/login/bookmarks) use their own JWT auth,
 // separate from the developer x-api-key gate below — mounted first so they
@@ -285,6 +288,13 @@ app.use('/web/v1/hadith-audio', hadithAudioRoutes);
 app.use('/web/v1/duas', duasRoutes);
 app.use('/web/v1/dictionary', dictionaryRoutes);
 app.use('/web/v1/roots', rootsRoutes);
+// Rarely used by the app today, but a search box or a fiqh tab 404s without
+// them, which reads as "the module does not exist" rather than "not on this tier".
+app.use('/web/v1/status', statusRoutes);
+app.use('/web/v1/search', require('./routes/search'));
+app.use('/web/v1/fiqh', fiqhRoutes);
+app.use('/web/v1/reciters', reciterRoutes);
+app.get('/web/v1/meta', metaHandler);
 
 // 404 handler
 app.use((req, res) => res.status(404).json({ error: 'Endpoint not found' }));
