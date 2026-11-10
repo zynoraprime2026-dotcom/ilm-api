@@ -18,6 +18,7 @@ const apiKeyAuth = require('./middleware/apiKeyAuth');
 const { wrapAsyncHandlers, responseTimeout, errorHandler } = require('./lib/guards');
 const { schemaGuard } = require('./lib/ensureSchema');
 const quranRoutes = require('./routes/quran');
+const mediaRoutes = require('./routes/media');
 const hadithRoutes = require('./routes/hadith');
 const hadithAudioRoutes = require('./routes/hadithAudio');
 const prayerTimesRoutes = require('./routes/prayerTimes');
@@ -236,6 +237,7 @@ function cdnCache(prefix) {
 app.use('/v1/quran', cdnCache('/v1/quran'));
 app.use('/v1/tafsir', cdnCache('/v1/tafsir'));
 app.use('/v1/quran', quranRoutes);
+app.use('/v1/media', mediaRoutes);
 app.use('/v1/tafsir', tafsirRoutes);
 app.use('/v1/search', require('./routes/search'));
 app.use('/v1/cite', require('./routes/cite'));
@@ -275,6 +277,7 @@ app.use('/web/v1', (req, res, next) => {
 app.use('/web/v1/prayer-times', prayerTimesRoutes);
 app.use('/web/v1/alarm', alarmRoutes);
 app.use('/web/v1/quran', quranRoutes);
+app.use('/web/v1/media', mediaRoutes);
 app.use('/web/v1/tafsir', tafsirRoutes);
 app.use('/web/v1/hadith', hadithRoutes);
 app.use('/web/v1/mutoon', mutoonRoutes);
