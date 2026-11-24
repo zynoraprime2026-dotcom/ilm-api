@@ -17,7 +17,7 @@ Interactive reference: https://ilm-api.vercel.app/docs (OpenAPI JSON at /openapi
 
 ## Status
 
-Early development. TypeScript / Node.js. Not deployed publicly yet — no stability guarantees.
+In active development. Node.js API deployed at https://ilm-api.vercel.app. See the interactive docs at https://ilm-api.vercel.app/docs. Availability and data coverage may change; check the changelog for updates.
 
 ## Related projects
 
