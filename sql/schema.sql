@@ -254,3 +254,9 @@ CREATE TABLE IF NOT EXISTS api_keys (
     requests_made INTEGER DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW()
 );
+
+-- Durable cooldowns prevent duplicate key recovery emails across API instances.
+CREATE TABLE IF NOT EXISTS api_key_recovery_cooldowns (
+    email TEXT PRIMARY KEY,
+    last_sent_at TIMESTAMPTZ NOT NULL
+);
