@@ -14,7 +14,8 @@ function generateApiKey() {
 // Self-serve — no approval step. Free tier by default; academic/pro tiers
 // would typically be upgraded manually or via a billing flow later.
 router.post('/signup', async (req, res) => {
-  const { email } = req.body;
+  const submittedEmail = req.body && req.body.email;
+  const email = typeof submittedEmail === 'string' ? submittedEmail.trim().toLowerCase() : '';
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'A valid email is required' });
   }
@@ -86,10 +87,11 @@ router.post('/signup', async (req, res) => {
 // identical whether or not the address is known, so this cannot be used to test
 // who has an account, and the key only ever goes to the address on file.
 const COOLDOWN_MS = Number(process.env.ILM_RECOVER_COOLDOWN_MS || 10 * 60 * 1000);
-const recentRecoveries = new Map();
+const recentRecoveries = new Map(); // process-local fallback when Postgres is unavailable
 
 router.post('/keys/recover', async (req, res) => {
-  const { email } = req.body || {};
+  const submittedEmail = req.body && req.body.email;
+  const email = typeof submittedEmail === 'string' ? submittedEmail.trim().toLowerCase() : '';
   if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     return res.status(400).json({ error: 'A valid email is required' });
   }
@@ -103,7 +105,18 @@ router.post('/keys/recover', async (req, res) => {
   if (now - last < COOLDOWN_MS) return res.json(generic);
 
   try {
-    const { rows } = await db.query('SELECT key, tier FROM api_keys WHERE owner_email = $1', [email]);
+    // Reserve the cooldown atomically in Postgres so concurrent requests and
+    // separate serverless instances cannot send duplicate recovery emails.
+    const reservation = await db.query(
+      `INSERT INTO api_key_recovery_cooldowns (email, last_sent_at)
+       VALUES ($1, NOW())
+       ON CONFLICT (email) DO UPDATE SET last_sent_at = EXCLUDED.last_sent_at
+       WHERE api_key_recovery_cooldowns.last_sent_at < NOW() - ($2 * INTERVAL '1 millisecond')
+       RETURNING email`,
+      [email, COOLDOWN_MS]
+    );
+    if (!reservation.rows.length) return res.json(generic);
+    const { rows } = await db.query('SELECT key, tier FROM api_keys WHERE LOWER(owner_email) = $1', [email]);
     if (rows.length > 0) {
       recentRecoveries.set(email, now);
       const mail = await mailer.send({ to: email, ...mailer.keyEmail({ key: rows[0].key, tier: rows[0].tier }) });
