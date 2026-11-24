@@ -10,6 +10,7 @@ const STATEMENTS = [
   "ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS owner_email TEXT",
   "ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS requests_made INTEGER DEFAULT 0",
   "ALTER TABLE api_keys ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()",
+  "CREATE TABLE IF NOT EXISTS api_key_recovery_cooldowns (email TEXT PRIMARY KEY, last_sent_at TIMESTAMPTZ NOT NULL)",
   "UPDATE api_keys SET tier = 'free' WHERE tier IS NULL",
 ];
 
