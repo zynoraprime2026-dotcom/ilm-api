@@ -107,7 +107,7 @@ app.get('/', (req, res) => res.sendFile(path.join(__dirname, '..', 'public', 'in
 
 // Public health check — no API key needed
 app.get('/read', (req, res) => res.redirect('/read.html'));
-app.get('/docs', (req, res) => res.redirect('/'));
+// /docs is served by the Swagger UI handler registered above.
 // Health must tell the truth: it once answered ok while the database was
 // unreachable, which is how a broken DATABASE_URL looked healthy for an hour.
 app.get('/health', async (req, res) => {
