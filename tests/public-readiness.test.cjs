@@ -15,8 +15,14 @@ require.cache[dbPath] = {
   exports: {
     query: async (sql, params = []) => {
       const text = String(sql);
+      if (/^INSERT INTO api_key_recovery_cooldowns/.test(text)) {
+        const last = recoveryCooldowns.get(params[0]) || 0;
+        if (Date.now() - last < params[1]) return { rows: [] };
+        recoveryCooldowns.set(params[0], Date.now());
+        return { rows: [{ email: params[0] }] };
+      }
       if (/^SELECT \* FROM api_keys WHERE key = \$1/.test(text) || /SELECT key, tier FROM api_keys WHERE owner_email = \$1/.test(text)) {
-        const hit = rows.filter((r) => (text.includes('owner_email') ? r.owner_email === params[0] : r.key === params[0]));
+        const hit = rows.filter((r) => (text.includes('owner_email') ? r.owner_email.toLowerCase() === params[0] : r.key === params[0]));
         return { rows: hit };
       }
       if (/^UPDATE api_keys SET key = \$1 WHERE key = \$2/.test(text)) {
@@ -44,6 +50,7 @@ require.cache[dbPath] = {
 
 // a mailer stub: records what would be sent, and can be switched off
 const sent = [];
+const recoveryCooldowns = new Map();
 let mailOn = true;
 const mailerPath = require.resolve('../src/lib/mailer');
 require.cache[mailerPath] = {
